@@ -70,7 +70,10 @@ Bf2=remez(Nf2,[0 WP WP+dW2 1],[1 1 0 0]);
 Bf3=remez(Nf3,[0 WP WP+dW3 1],[1 1 0 0]);
 Bf4=remez(Nf4,[0 WP WP+dW4 1],[1 1 0 0]);
 
-
+## Filtering tests
+l=1:1024;
+vector_step=ones(1,1024);
+vector_sins=sin(pi*(l-1)*0.25)+sin(pi*(l-1)*0.5);
 
 
 # GUI to plot characteristic functions
@@ -87,44 +90,54 @@ while flag_control==1
   switch (select)
     case 2
       titulo=sprintf("Butter N=%i, dftran=%.2f",Nb1,dW1);
-      window=1; 
-      [H,W]=freqz(Bb1,Ab1,1024);
+      B=Bb1;
+      A=Ab1;
+      filename=sprintf("butter%i.cpp",Nb1); 
     case 3
       titulo=sprintf("Butter N=%i, dftran=%.2f",Nb2,dW2);
-      window=2; 
-      [H,W]=freqz(Bb2,Ab2,1024);
+      B=Bb2;
+      A=Ab2;   
+      filename=sprintf("butter%i.cpp",Nb2);   
     case 4
       titulo=sprintf("Ellip N=%i, dftran=%.2f",Ne1,dW1);
-      window=3; 
-      [H,W]=freqz(Be1,Ae1,1024);
+      B=Be1;
+      A=Ae1;  
+      filename=sprintf("ellip%i.cpp",Ne1);    
     case 5
       titulo=sprintf("Ellip N=%i, dftran=%.2f",Ne2,dW2);
-      window=4; 
-      [H,W]=freqz(Be2,Ae2,1024);
+      B=Be2;
+      A=Ae2;    
+      filename=sprintf("ellip%i.cpp",Ne2);  
     case 6
       titulo=sprintf("Ellip N=%i, dftran=%.2f",Ne3,dW3);
-      window=5; 
-      [H,W]=freqz(Be3,Ae3,1024);
+      B=Be3;
+      A=Ae3;
+      filename=sprintf("ellip%i.cpp",Ne3);    
     case 7
       titulo=sprintf("Ellip N=%i, dftran=%.2f",Ne4,dW4);
-      window=6; 
-      [H,W]=freqz(Be4,Ae4,1024);
+      B=Be4;
+      A=Ae4;
+      filename=sprintf("ellip%i.cpp",Ne4);
     case 8
-     titulo=sprintf("Fir N=%i, dftran=%.2f",Nf1,dW1);
-      window=7; 
-      [H,W]=freqz(Bf1,1,1024);
+      titulo=sprintf("Fir N=%i, dftran=%.2f",Nf1,dW1);
+      B=Bf1;
+      A=1;   
+      filename=sprintf("fir%i.cpp",Nf1);   
     case 9
-     titulo=sprintf("Fir N=%i, dftran=%.2f",Nf2,dW2);
-      window=8; 
-      [H,W]=freqz(Bf2,1,1024);
+      titulo=sprintf("Fir N=%i, dftran=%.2f",Nf2,dW2);
+      B=Bf2;
+      A=1;
+      filename=sprintf("fir%i.cpp",Nf2);    
     case 10
-     titulo=sprintf("Fir N=%i, dftran=%.2f",Nf3,dW3);
-      window=9; 
-      [H,W]=freqz(Bf3,1,1024);
+      titulo=sprintf("Fir N=%i, dftran=%.2f",Nf3,dW3);
+      B=Bf3;
+      A=1;     
+      filename=sprintf("fir%i.cpp",Nf3);
     case 11
-     titulo=sprintf("Fir N=%i, dftran=%.2f",Nf4,dW4);
-      window=10; 
-      [H,W]=freqz(Bf4,1,1024);      
+      titulo=sprintf("Fir N=%i, dftran=%.2f",Nf4,dW4);
+      B=Bf4;
+      A=1;     
+      filename=sprintf("fir%i.cpp",Nf4); 
       case 1
       flag_control=0;
     otherwise
@@ -132,14 +145,49 @@ while flag_control==1
       flag_control=-1
   endswitch
   if flag_control==1
-    figure(window);
+    [H,W]=freqz(B,A,1024);
+    ystep=filter(B,A,vector_step);
+    ysins=filter(B,A,vector_sins);
+    [Hf,W]=freqz(ysins/512,1,1024);     
+    figure(1);
     plot(W/pi,20*log10(abs(H)));
     title(titulo);
     xlabel("freq digital ( 0 - 1)"); ylabel("|H(f)|dB");
-  end
-end
+    figure(2);
+    plot(l-1,ystep);
+    title("Response to the step signal");
+    xlabel("n");
+    ylabel("ystep(n)");
+    figure(3);
+    hax=subplot(2,1,1);
+    plot(hax,l-1,ysins);
+    title(hax,"Filtering response to ysins(n)");
+    xlabel(hax,"n");
+    ylabel(hax,"y(n) filtered");
+    hax=subplot(2,1,2);
+    plot(hax,l-1,vector_sins);
+    title(hax,"ysins(n)");
+    xlabel(hax,"n");
+    ylabel(hax,"ysins(n)");
+    figure(4);
+    plot(W/pi,20*log10(abs(Hf)));
+    title("Filtered siganl spectrun");
+    xlabel("freq digit ( 0 - 1)");
+    ylabel("|Y(f)| dB");
+    
+    ## Menu to save data into files
+    
+    select2=menu("Save filter?","NO","YES");
+    
+    if select2==2
+      status=store_filter(filename,B,A);
+      if status==-1
+        error("File couldn't be created");
+      endif
+    endif
+  endif
+        
+endwhile
 
   
   
-
-
