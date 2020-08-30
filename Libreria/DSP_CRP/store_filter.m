@@ -10,13 +10,16 @@ function status = store_filter (file_name,Num,Den)
 ## in a file. The funtion allows the user to select the path where
 ## to store the file.
 ##
-## The format of the file is a cpp or c standard ANSI C file.
+## The format of the file is a hheadr file for cpp or c standard 
+## ANSI C file.
 ##
 ## Function returns true when file has been successfully created or
 ## false if not
 ##
 ## Trace
 ## 27/07/2020: First edition
+## 10/08/2020: filename argument has not the suffix. The function creates a
+##              header file intead of a Cpp file.
 ##
 ##
 ## This program is free software: you can redistribute it and/or modify it
@@ -42,6 +45,7 @@ if status==false
   disp("Incorrect file name. Storage action aborted\n");
   return;
 endif
+
   
 status=isnumeric(Num);
 if status==false
@@ -73,16 +77,20 @@ endif
   
 if status==true 
   ## Definition of header for C/Cpp files
-  header=sprintf("/**\n*\t%s\n*\n*\t\\author Dr. Carlos Romero Pérez\n",file_name);
+  uppername=toupper(file_name);
+  header=sprintf("/**\n*\t%s.h\n*\n*\t\\author Dr. Carlos Romero Pérez\n",file_name);
   datefile=sprintf("*\t\\date %s \n",date());
   description=sprintf("*\t Description\n*\t==\n*\t Filter coefficients\n*\n*/\n");
+  conditional=sprintf("#ifndef _%s_\n#define\t_%s_\n",uppername,uppername);
+  endconditional=sprintf("#endif\n");
+  
   # Generation of the full path+file name and opening file
   pathfile=uigetdir("","Select folder destination");    ## Select destination path
    
-  path_name=[pathfile file_name];
+  path_name=strcat(pathfile,file_name,".h");
   
-  namevector=file_name(1:strchr(file_name,".")-1);
-   
+  namevector=file_name;
+  
   [fid,msg]=fopen(path_name,"wt");
     
   if fid==-1
@@ -93,6 +101,7 @@ if status==true
     fprintf(fid,header);
     fprintf(fid,datefile);
     fprintf(fid,description);
+    fprintf(fid,conditional);
     ncoef=length(Num);
     fprintf(fid,"const double B%s[]={",namevector);
       
@@ -116,6 +125,8 @@ if status==true
       
     endfor
     fprintf(fid,"};\n");
+    
+    fprintf(fid,endconditional);
       
     if fclose(fid)==0
       disp("File successfully created");
