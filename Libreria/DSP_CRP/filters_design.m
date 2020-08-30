@@ -10,7 +10,8 @@
 #
 # Trace
 # =====
-#  23/07/2020    Initial elaboration of the script
+# 23/07/2020    Initial elaboration of the script
+# 10/08/2020    filename doesn't include the suffix .cpp
 #
 
 pkg load signal
@@ -92,52 +93,52 @@ while flag_control==1
       titulo=sprintf("Butter N=%i, dftran=%.2f",Nb1,dW1);
       B=Bb1;
       A=Ab1;
-      filename=sprintf("butter%i.cpp",Nb1); 
+      filename=sprintf("butter%i",Nb1); 
     case 3
       titulo=sprintf("Butter N=%i, dftran=%.2f",Nb2,dW2);
       B=Bb2;
       A=Ab2;   
-      filename=sprintf("butter%i.cpp",Nb2);   
+      filename=sprintf("butter%i",Nb2);   
     case 4
       titulo=sprintf("Ellip N=%i, dftran=%.2f",Ne1,dW1);
       B=Be1;
       A=Ae1;  
-      filename=sprintf("ellip%i.cpp",Ne1);    
+      filename=sprintf("ellip%i",Ne1);    
     case 5
       titulo=sprintf("Ellip N=%i, dftran=%.2f",Ne2,dW2);
       B=Be2;
       A=Ae2;    
-      filename=sprintf("ellip%i.cpp",Ne2);  
+      filename=sprintf("ellip%i",Ne2);  
     case 6
       titulo=sprintf("Ellip N=%i, dftran=%.2f",Ne3,dW3);
       B=Be3;
       A=Ae3;
-      filename=sprintf("ellip%i.cpp",Ne3);    
+      filename=sprintf("ellip%i",Ne3);    
     case 7
       titulo=sprintf("Ellip N=%i, dftran=%.2f",Ne4,dW4);
       B=Be4;
       A=Ae4;
-      filename=sprintf("ellip%i.cpp",Ne4);
+      filename=sprintf("ellip%i",Ne4);
     case 8
       titulo=sprintf("Fir N=%i, dftran=%.2f",Nf1,dW1);
       B=Bf1;
       A=1;   
-      filename=sprintf("fir%i.cpp",Nf1);   
+      filename=sprintf("fir%i",Nf1);   
     case 9
       titulo=sprintf("Fir N=%i, dftran=%.2f",Nf2,dW2);
       B=Bf2;
       A=1;
-      filename=sprintf("fir%i.cpp",Nf2);    
+      filename=sprintf("fir%i",Nf2);    
     case 10
       titulo=sprintf("Fir N=%i, dftran=%.2f",Nf3,dW3);
       B=Bf3;
       A=1;     
-      filename=sprintf("fir%i.cpp",Nf3);
+      filename=sprintf("fir%i",Nf3);
     case 11
       titulo=sprintf("Fir N=%i, dftran=%.2f",Nf4,dW4);
       B=Bf4;
       A=1;     
-      filename=sprintf("fir%i.cpp",Nf4); 
+      filename=sprintf("fir%i",Nf4); 
       case 1
       flag_control=0;
     otherwise
