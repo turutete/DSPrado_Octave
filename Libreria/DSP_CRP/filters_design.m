@@ -12,6 +12,7 @@
 # =====
 # 23/07/2020    Initial elaboration of the script
 # 10/08/2020    filename doesn't include the suffix .cpp
+# 06/09/2020  Filters are also stored as biquad (or one order iir filter)
 #
 
 pkg load signal
