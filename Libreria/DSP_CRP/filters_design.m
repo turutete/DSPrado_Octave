@@ -36,6 +36,16 @@ Rs=-20*log10(ds);
 
 [Bb1,Ab1]=butter(Nb1,Wc1);
 [Bb2,Ab2]=butter(Nb2,Wc2);
+
+Zb1=zeros(Bb1);
+Pb1=zeros(Ab1);
+
+Zb2=zeros(Bb2);
+Pb2=zeros(Ab2);
+
+Nzeros=length(Zb1)
+
+
 ## Important: filters prototypes for dW3 and dW4 drive to wrong filters
 ## propably because the filter order are too high
 
