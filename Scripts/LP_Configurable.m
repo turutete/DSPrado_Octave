@@ -69,14 +69,14 @@ figure(2);plot(W/pi,20*log10(abs(HBT)));grid;xlabel('f/FNyqyst');
 ylabel('|HT(f)| dB');title('Respuesta en frecuencia Biquads en Cascada');
 
 % Gestión del escalado K1 para que las salidas de los biquad estén normalizados
-%K1=1/abs(HB1(63));
-%K2=1/abs(HB2(63));
-%K3=1/abs(HB3(63));
-%K4=1/abs(HB4(63));
-%K5=1/abs(HB5(63));
-%K6=1/abs(HB6(63));
-%K7=K/(K1*K2*K3*K4*K5*K6);
-K1=K;
+K1=1/abs(HB1(63));
+K2=1/abs(HB2(63));
+K3=1/abs(HB3(63));
+K4=1/abs(HB4(63));
+K5=1/abs(HB5(63));
+K6=1/abs(HB6(63));
+K7=K/(K1*K2*K3*K4*K5*K6);
+%K1=K;
 
 % Cuantización coeficientes Q2.30
 Nq1=round(N1*K1*2^30);
