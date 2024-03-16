@@ -55,40 +55,44 @@ if (itera<0)
 endif
 
 
-h00=sqrt(2)*wm0;
-veces=(int8)(1);
 
-N=length(h00);
+veces=(int8)(0);
+
+N=length(wm0);
 n=1:N;
+h0=[];
 
-h10(n)=(-1).^(N-n).*h00(N-n+1);
+Sumh0=wm0*ones(N,1)
+Sumh02=wm0*wm0'
 
-h0conv=h00;
-h1conv=h10;
-h0i=[];
-h1i=[];
 
 while (veces<=itera) 
-  L=length(h0conv);
-  k=1:L;
-  figure(2*veces-1);plot(k-1,h0conv);
-  figure(2*veces);plot(k-1,h1conv);
-  h0conv*ones([L 1])
-  h1conv*ones([L 1])
+ haux=[];
   
-  h0i(2^veces *(n-1)+1)=h00(n);
-  h1i(2^veces * (n-1)+1)=h10(n);
+ haux(2^veces*(n-1)+1)=sqrt(2)*wm0(n);
+ 
+ if (veces>0)
+   h0=conv(h0,haux); 
+ else
+   h0=haux;
+  endif
+ 
+ veces=veces+1;
   
-  h0conv=conv(h0conv,h0i);
-  h1conv=conv(h1conv,h1i);
-  
-  h0i=[];
-  h1i=[];
-  
-  veces=veces+1;
-end
+ 
+endwhile 
 
-h0=h0conv;
-h1=h1conv;
+ L=length(h0);
+ l=1:L;
+ h1(l)=(-1).^l.*h0(L-l+1);
+
+ [H0,W]=freqz(h0*2/L,1,1024);
+ [H1,W]=freqz(h1*2/L,1,1024);
+
+  subplot(2,1,1);
+  plot(W/pi, 2*log10(abs(H0)));title('H0');
+  subplot(2,1,2);
+  plot(W/pi, 2*log10(abs(H1)));title('H1');
+
 
 endfunction
