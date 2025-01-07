@@ -15,14 +15,16 @@ dI=0.01;
 It=(-2048:2047).*dI;
 Vt=(alfa*Rc.*It)./(atan(beta.*It).*It.*Rc+alfa);
 
+Vaval=max(Vt);  % Tensión aproximada de avalancha
+
 % Modelo de circuito de descarga
 Rl=10;
 
 % Ejemplo de Arco DC
 Fs=12500;
-%Vg_vector=[75*ones(1,512) 150*ones(1,512)];
-n=1:1024;
-Vg_vector(n)=150*sin(2*pi*50*n/Fs);
+Vg_vector=[75*ones(1,512) 150*ones(1,512)];
+%n=1:1024;
+%Vg_vector(n)=150*sin(2*pi*50*n/Fs);
 
 
 
@@ -44,8 +46,16 @@ for index=1:length(Vg_vector)
   Vt_corte=Vg_vector(index)-It_corte.*Rl;
   
   if index==1
-    [Itn,indimax]=max(It_corte);
-    Vtn=Vt_corte(indimax);
+    % El primer punto, se escoge en zona de descarga luminiscente
+    % si uno de los puntos de corte está en esta zona. Si no, se
+    % escoge el de mayor corriente en zona de avalancha
+    if (length(Vt_corte)==3)
+      [Itn,indtn]=min(It_corte);
+    else
+    [Itn,indtn]=max(It_corte);
+    endif
+  
+    Vtn=Vt_corte(indtn);
     Vtprev=Vtn;
     Itprev=Itn;
     Ptprev=Vtn*Itn;
@@ -67,19 +77,22 @@ for index=1:length(Vg_vector)
 endfor
 
 % Modelo dinámico del arco eléctrico
-tau=100e-6;
+tau_aval=100e-6;
+nest=tau_aval*Fs;
+tau=1/(Fs*(e^(2.3/nest)-1));
 
-A=1+2*tau*Fs;
-B=1-2*tau*Fs;
-
-Nom=[1 1];
-Den=[A B];
+Nom=1;
+Den=[1+tau*Fs -tau*Fs];
 
 Iarc=filter(Nom,Den,It_vector);
 Varc=filter(Nom,Den,Vt_vector);
 
-figure(1);plot(Varc);
-figure(2);plot(Iarc);
+t=(1:length(Varc))/Fs;
+
+figure(1);plot(t,Varc);
+xlabel('t[s]');ylabel('Varc(t)');title('Tensión de arco DC');
+figure(2);plot(t,Iarc);
+xlabel('t[s]');ylabel('Iarc(t)');title('Corriente de arco DC');
 
 
 
