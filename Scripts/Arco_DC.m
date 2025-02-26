@@ -17,16 +17,16 @@
 addpath('../Libreria');
 
 % Condiciones ambientales
-Su=1;           % Irradiancia por unidad S/Sref
-T=25;           % Temperatura en ºC
+%Su=0.5+0.5*rand(1);    % Irradiancia por unidad S/Sref [0.5 - 1]
+%T=25+15*(1-rand(1));           % Temperatura en ºC [25 - 40]
+Su=1;
+T=25;
 
 % Condiciones de trabajo
 Msampling=5;
 fswitch=2500;
 fsampling=Msampling*fswitch;
 Nciclos=10;
-
-
 
 
 % Selector Panel
@@ -50,7 +50,7 @@ switch (ejemplo)
     Iscpanel=9.69;    %A
     Vocpanel=47;      %V
     alfa_isc=0.05;    %/ºC
-    beta_vosc=-0.29  % %/ºC
+    beta_vosc=-0.29;  % %/ºC
     Vmpptpanel=38.7;
     Impptpanel=9.17;
   case 3
@@ -85,6 +85,40 @@ Isc=Iscpanel/Np;          % A
 I0ref=Isc/(e^(Vocpanel/(Ns*Vter))-1);
 I0=I0ref*(Tk/Tref)^3*e^(q*Eg*(1/Tref-1/Tk)/(K*n));
 Il=Su*Isc*(1+alfa_isc*(Tk-Tref)/100);
+Vmppt=Vmpptpanel/Ns;
+
+% Cálculo de Voc real (I=0)
+flag_loop=0;
+Vn=Vmppt;
+itera=0;
+error_max=0.001;
+iteramax=1000;
+
+while(flag_loop==0)
+  f=Il-I0*(e^(Vn/Vter)-1)-Vn/Rsh;
+  df=-I0/Vter*e^(Vn/Vter)-1/Rsh;
+  Vnext=Vn-f/df;
+  err=abs(Vn-Vnext);
+  Vn=Vnext;
+  if(err<error_max)
+    flag_loop=1;
+  endif
+  itera=itera+1;
+  if(itera>iteramax)
+    error("No converge");
+  endif
+endwhile
+
+Voc_real=Vn;
+
+Voc_panel_real=Voc_real*Ns;
+if(Voc_panel_real<Vmpptpanel)
+  disp("Tensión de panel mayor que tensión de circuito abierto");
+  flag_loop=1;
+  Ipanel=0;
+else
+  flag_loop=0;
+endif
 
 % Simulación de corriente en bus DC debido a la carga. Suponemos D=0.5
 D=0.5;
@@ -95,7 +129,17 @@ idcp(c)=Iscpanel*(1-(c-1)/Msampling)/(1-D);
 
 idc_load=[idcp idcp idcp idcp idcp];
 
-% Simulación de corriente de arco
+L=length(idc_load);
+
+% Simulación dinámica arco-panel
+iarco=0;
+
+for n=1:L
+  % Valor de tensión DC
+  idctotal=iarco+idc_load(n);
+endfor
+
+
 
 
 

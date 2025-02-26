@@ -19,6 +19,7 @@
 ##
 ## @end deftypefn
 
+addpath("..\Scripts");
 
 function arco= Arco (v, Rc, alfa, beta, Rl)
 

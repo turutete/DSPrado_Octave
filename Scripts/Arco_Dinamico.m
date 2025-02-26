@@ -6,6 +6,7 @@
 # Autor: Dr. Carlos Romero
 # Fecha: 22/12/2024
 
+
 % Modelado de la curva estatica del arco
 Rc=2221;
 alfa=49.0874;
