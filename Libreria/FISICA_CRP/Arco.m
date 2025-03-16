@@ -57,7 +57,7 @@ function arco= Arco (v, Rc, alfa, beta, Rl)
     endif
 
     It_corte=(index_corte-2049).*dI;
-    Vt_corte=Vg_vector(index)-It_corte.*Rl;
+    Vt_corte=v(index)-It_corte.*Rl;
 
     if index==1
       % El primer punto, se escoge en zona de descarga luminiscente
