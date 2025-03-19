@@ -42,7 +42,7 @@ Su=1;           % Irradiancia por unidad S/Sref
 T=25;           % Temperatura en ºC
 
 % Selector Panel
-ejemplo=2;
+ejemplo=3;
 
 switch (ejemplo)
   case 1

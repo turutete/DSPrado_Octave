@@ -6,6 +6,7 @@
 # Autor: Dr. Carlos Romero
 # Fecha: 22/12/2024
 
+
 % Modelado de la curva estatica del arco
 Rc=2221;
 alfa=49.0874;
@@ -22,9 +23,10 @@ Rl=10;
 
 % Ejemplo de Arco DC
 Fs=12500;
-Vg_vector=[75*ones(1,512) 150*ones(1,512)];
-%n=1:1024;
-%Vg_vector(n)=150*sin(2*pi*50*n/Fs);
+%Vg_vector=[75*ones(1,512) 150*ones(1,512)];
+%Ejemplo Arco AC
+n=1:1024;
+Vg_vector(n)=150*sin(2*pi*50*n/Fs);
 
 
 
@@ -32,7 +34,7 @@ Vt_vector=[];
 It_vector=[];
 
 for index=1:length(Vg_vector)
-  
+
   % Cálculo de puntos de trabajo
   Vt2=Vg_vector(index)-It.*Rl;
 
@@ -41,10 +43,10 @@ for index=1:length(Vg_vector)
   if length(index_corte)==0
     error("El modelo V-I estático tiene pocos puntos");
   endif
-  
+
   It_corte=(index_corte-2049).*dI;
   Vt_corte=Vg_vector(index)-It_corte.*Rl;
-  
+
   if index==1
     % El primer punto, se escoge en zona de descarga luminiscente
     % si uno de los puntos de corte está en esta zona. Si no, se
@@ -54,7 +56,7 @@ for index=1:length(Vg_vector)
     else
     [Itn,indtn]=max(It_corte);
     endif
-  
+
     Vtn=Vt_corte(indtn);
     Vtprev=Vtn;
     Itprev=Itn;
@@ -70,10 +72,10 @@ for index=1:length(Vg_vector)
     Itprev=Itn;
     Ptprev=Vtn*Itn;
   endif
-  
+
   Vt_vector(index)=Vtn;
   It_vector(index)=Itn;
-  
+
 endfor
 
 % Modelo dinámico del arco eléctrico
@@ -90,13 +92,9 @@ Varc=filter(Nom,Den,Vt_vector);
 t=(1:length(Varc))/Fs;
 
 figure(1);plot(t,Varc);
-xlabel('t[s]');ylabel('Varc(t)');title('Tensión de arco DC');
+xlabel('t[s]');ylabel('Varc(t)');title('Tensión de arco');
 figure(2);plot(t,Iarc);
-xlabel('t[s]');ylabel('Iarc(t)');title('Corriente de arco DC');
-
-
-
-  
+xlabel('t[s]');ylabel('Iarc(t)');title('Corriente de arco');
 
 
 
@@ -111,5 +109,9 @@ xlabel('t[s]');ylabel('Iarc(t)');title('Corriente de arco DC');
 
 
 
-  
+
+
+
+
+
 
