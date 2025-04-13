@@ -1,92 +1,64 @@
-## -*- texinfo -*-
+## -*- texinfo -*- 
 ##
-##  Puntos_Corte.m
+## Puntos_Corte.m
 ##
-## Esta función tiene como parámetros de entrada 2 señales temporales, x1(n)
-## y x2(n) de longitud arbitraria pero iguales.
+## Esta función admite como parámetros de entrada 2 secuencias, input1 e
+## input2. Ambas secuencias deben ser numericas de igua longitud.
 ##
-## La función calcula los puntos de interescción entre ambas señales,
-## devolviendo una matriz Cx2, siendo cada fila el punto (y,x) de intersección.
+## Esta función detecta los índices en el que ambas secuencias tienen cruces 
+## por cero.
 ##
-## Si ambas secuencias no se cortan en ningún punto, la función retorna -1.
+## input1: Secuencia numérica 1 1 X L
+## input2: Secuencia numérica 2 1 X L
+## retval: Vector 1 X C de índices de corte, siendo C el número de puntos de
+##          corte entre ambas secuencias. Si es [], no tienen puntos de corte.
 ##
+## Author: Dr. Carlos Romero
+## Created: 2024-12-26
+## 
+## -*- texinfo -*- 
 ## @deftypefn {} {@var{retval} =} Puntos_Corte (@var{input1}, @var{input2})
 ##
-## Copyright (C) 2024 Zifor R&D AIE
-## Author: Dr. Carlos Romero
-## Created: 2024-12-15
+## Copyright (C) 2024 ZGR R&D AIE
 ## @end deftypefn
+
+
 
 function retval = Puntos_Corte (input1, input2)
   
-  % Validaciones
-  if(isnumeric(input1)==false || isnumeric(input2)==false)
-    error("Las secuencias de entrada deben ser numéricas");
+  if (isnumeric(input1)==false || isnumeric(input2)==false)
+    error("Los vectores de entrada deben ser numéricos");
   endif
   
-  if(isvector(input1)==false || isvector(input2)==false)
-    error("Las secuencias de entrada deben ser vectores");
+  if ( isvector(input1)==false || isvector(input2)==false)
+    error("Los parámetros de entrada deben ser vectores");
   endif
   
-  if (size(input1)!=size(input2))
-    error("La lingitude de ambas secuencias de entrada debe ser igual");
+  if (length(input1)!=length(input2))
+    error("Los vectores de entrada deben ser de la misma longitud");
   endif
   
-  % Algoritmo
-  N=length(input1);
+  % Cálculo rápido puntos corte
   retval=[];
+  F=input2-input1;
+  L=length(F);
+  F2=[F(1)^2 F(1:L-1).*F(2:L)];
+  index_cross=find(F2<0);
+  
+  veces=length(index_cross);
   index=1;
-  estado=0;
-  flag_cross=0;
+  
+  while veces>0
+    y1=input1(index_cross(index)-1);
+    y2=input1(index_cross(index));
+    g1=input2(index_cross(index)-1);
+    g2=input2(index_cross(index));
     
-  while (index<=N)    
-    switch (estado)
-      case {0}
-        if (input1(index)==input2(index))
-          retval=[retval;[index input1(index)]];
-        elseif (input1(index)>input2(index))
-          estado=1;
-        else
-          estado=-1;
-        endif
-      case{1}
-        if (input1(index)<input2(index))
-          estado=-1;
-          flag_cross=1;
-        endif
-           
-        if (input1(index)==input2(index))
-          estado=0;
-          retval=[retval;[index input1(index)]];
-        endif 
-      case {-1}
-         if (input1(index)>input2(index))
-          estado=1;
-          flag_cross=1; 
-         endif
-           
-         if (input1(index)==input2(index))
-          estado=0;
-          retval=[retval;[index input1(index)]];
-         endif        
-    endswitch
+    x=index_cross(index)+(y1-g1)/(g2-g1-y2+y1);
     
-    if (flag_cross==1)
-      flag_cross=0;
-      x1=index-1;
-      y1=input1(index-1);
-      ya=input1(index);
-      y2=input2(index-1);
-      yb=input2(index);
-      
-      xc=x1+(ya-y1)/(y2+ya-y1-yb);
-      yc=y1+(xc-index+1)*(y2-y1);
-      retval=[retval;[xc yc]];
-    endif
+    retval(index)=x;
     index=index+1;
-  endwhile 
-  if (size(retval)==[0 0])
-    retval=-1;
-  endif
-
+    veces=veces-1;
+  endwhile
+  
 endfunction
