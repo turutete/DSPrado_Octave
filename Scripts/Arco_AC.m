@@ -14,7 +14,8 @@
 # Fecha: 16/03/2025
 #
 
-
+addpath('../Libreria/FISICA_CRP');
+addpath('../ZGR/electric-transients-generator');
 
 
 % Condiciones de trabajo
