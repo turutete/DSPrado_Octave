@@ -54,10 +54,14 @@ function Wavelet_Visor (W, Fs, M)
   R(1,n)=W(offset+n);
 
   % Representación
+
+  figs = findall(0, 'Type', 'figure');
+  max_fig = max(figs);
+
   N=floor(L/2^M);
   n=1:N;
   fs=Fs/2^M;
-  figure(1);
+  figure(max_fig+1);
   plot(n/fs,R(1,n));
   fini=0;
   fnext=fs/2;
@@ -69,7 +73,7 @@ function Wavelet_Visor (W, Fs, M)
   fnext=fnext*2;
 
   for f=2:filas
-    figure(f);
+    figure(f+max_fig);
     plot(n/fs,R(f,n));
 
     titulotxt=strcat("W",mat2str(f-1,0)," Fini[Hz]=",mat2str(fini,8)," Ffin[Hz]= ",mat2str(fnext,8));
