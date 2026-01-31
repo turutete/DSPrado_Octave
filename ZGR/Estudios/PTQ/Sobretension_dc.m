@@ -22,6 +22,7 @@ Duracion=0.02;  % Duración de la sobretensión
 Nper=256;       % Índice de inicio de la perturbación
 Vover=1.1;      % Sobretensión
 Vmaxfallo=1.2;  % Fallo de sobretensión inmediato
+Tovermax=0.015; % Tiempo máximo permitido en alerta de sobretensión
 
 
 % Filtrado LP 10Hz Convencional
@@ -32,14 +33,15 @@ Wp=100*2/Fs;
 step=ones(1,1024);
 ystep=filter(B,A,step);
 
-%plot(W/pi*Fs/2,20*log10(abs(H)));
-%xlabel("f[Hz]");ylabel("LP(f) dB");
+plot(W/pi*Fs/2,20*log10(abs(H)));
+xlabel("f[Hz]");ylabel("LP(f) dB");
 
 
 % Cálculos auxiliares
 l=1:N;
 t=(l-1)/Fs; % Base de tiempo en s
 Ntotper=floor(Duracion*Fs); % Número de muestras de la perturbación
+Noverfault=floor(Tovermax*Fs); % Número de muestras en alerta para fallo
 Vdc=Vdcnom*ones(1,N);
 noise=randn(1,N);
 Vper=zeros(1,N);
@@ -53,8 +55,12 @@ flag_run=1;
 
 while (flag_run==1)
   choice=menu("Escenarios","Súbita 1.15 Var=0.1","Súbita 1.15 Var=1", ...
-  "Rampa 10pu Var=0.1","Rampa 10pu Var=1","Oscilatorio","Salir");
-  close("all");
+  "Rampa 10pu Var=0.1","Rampa 10pu Var=1","Oscilatorio","Súbita 1.5 Var=1", ...
+  "Salir");
+  if (choice!=7)
+    close("all");
+  endif
+
 
   switch (choice)
     case {1}
@@ -125,6 +131,13 @@ while (flag_run==1)
       Vin=Vdc+Vper+sqrt(var2_high)*noise+Vosc;
 
     case {6}
+      % Escenario 6: 1.	Subida súbita de la tensión del bus DC de valor nominal
+      % a 1.1 p.u. Varianza del ruido=1.
+      Vsobre=1.15; % Sobretensión de dc
+      Vper=zeros(1,N);
+      Vper(Nper:N)=(Vsobre-1)*Vdcnom;
+      Vin=Vdc+Vper+sqrt(var2_high)*noise*sqrt(0.01);
+    case {7}
       flag_run=0;
 
     otherwise
@@ -138,7 +151,8 @@ while (flag_run==1)
 
     figure(1);
     plot(t,Vin,t,Vconv);
-    xlabel("t[s]");ylabel("Vconv");
+    %plot(t,Vin);
+    xlabel("t[s]");ylabel("Vconv");grid;
 
     flag=0;
     alerta=0;
@@ -157,7 +171,7 @@ while (flag_run==1)
             count_pert=0;
           else
             count_pert=count_pert+1;
-            if (count_pert>=Ntotper)
+            if (count_pert>=Noverfault)
               flag=1;                % Detección de fallo de sobretensión por tiempo
             endif
           endif
@@ -177,11 +191,11 @@ while (flag_run==1)
     endif
 
     if (flag==2)
-      disp("Fallo inmediato de sobretensión t="); disp((ind-1)/Fs);
+      disp("Fallo inmediato de sobretensión t="), disp((ind-1)/Fs);
     endif
 
     if (flag==1)
-      disp("Fallo de sobretensión t="); disp((ind-1)/Fs);
+      disp("Fallo de sobretensión t="), disp((ind-1)/Fs);
     endif
 
 
@@ -189,22 +203,27 @@ while (flag_run==1)
 
     M=RT_Momentos(Vin,Fs/Fred);
 
+    [vm1,in1]=max(M(1,:))
+    [vm2,in2]=max(M(2,:))
+    [vm3,in3]=max(M(3,:))
+    [vm4,in4]=max(M(4,:))
+
     figure(2);
     subplot(2,2,1);
     plot(t,M(1,:));
-    xlabel("t[s]");ylabel("Media");
+    xlabel("t[s]");ylabel("Media");grid;
 
     subplot(2,2,2);
     plot(t,M(2,:));
-    xlabel("t[s]");ylabel("Varianza");
+    xlabel("t[s]");ylabel("Varianza");grid;
 
     subplot(2,2,3);
     plot(t,M(3,:));
-    xlabel("t[s]");ylabel("Curtosis");
+    xlabel("t[s]");ylabel("Curtosis");grid;
 
     subplot(2,2,4);
     plot(t,M(4,:));
-    xlabel("t[s]");ylabel("Asimetría");
+    xlabel("t[s]");ylabel("Asimetría");grid;
 
 
     % Método Wavelet DB4 M=3

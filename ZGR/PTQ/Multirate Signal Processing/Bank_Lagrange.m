@@ -11,8 +11,9 @@
 ##
 ## x: Es la señal de entrada x(n)
 ## M: Es el nivel de descomposición
-## R: Es el número de coeficientes del filtro hanf band distinto de cero. El
-##    orden del filtro es 4*R-2
+## R: Es el número de coeficientes del filtro half band distintos de cero y
+##    diferentes entre sí, con excepción del coeficiente intermedio de valor
+##    1/2. El orden del filtro es 4*R-2
 ##
 ## La función retorna las secuencias de salida de cada nivel de descomposición
 ## en un único vector.
@@ -76,7 +77,7 @@ function W = Bank_Lagrange (x, M, R)
   L=length(H);
 
   for i=1:L
-    G(i)=(-1)^(L-i+1)*H(L-(i-1));
+    G(i)=(-1)^(L-i)*H(L-i+1);
   endfor
 
   % Algoritmo

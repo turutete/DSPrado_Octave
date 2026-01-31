@@ -67,7 +67,7 @@ function Wavelet_Visor (W, Fs, M)
   fnext=fs/2;
 
   titulotxt=strcat("W",mat2str(0,0)," Fini[Hz]=",mat2str(fini,8)," Ffin[Hz]= ",mat2str(fnext,8));
-  xlabel('t[s]');ylabel('W');title(titulotxt);
+  xlabel('t[s]');ylabel('W');title(titulotxt);grid;
 
   fini=fnext;
   fnext=fnext*2;
@@ -77,7 +77,7 @@ function Wavelet_Visor (W, Fs, M)
     plot(n/fs,R(f,n));
 
     titulotxt=strcat("W",mat2str(f-1,0)," Fini[Hz]=",mat2str(fini,8)," Ffin[Hz]= ",mat2str(fnext,8));
-    xlabel('t[s]');ylabel('W');title(titulotxt);
+    xlabel('t[s]');ylabel('W');title(titulotxt);grid;
 
     fini=fnext;
     fnext=fnext*2;

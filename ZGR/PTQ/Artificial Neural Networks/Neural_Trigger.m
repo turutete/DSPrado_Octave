@@ -6,7 +6,7 @@
 ##
 ## Los parámetros de entrada son:
 ##
-## X: Vector de N entradas X [Na x 1].
+## X: Vector de Na entradas X [Na x 1].
 ## P: Matriz de pesos  P=[Nb X Na].
 ## B: Bias de las neuronas B=[Nb 1].
 ## D: Cadena de caracteres de selección de la función de disparo:
@@ -64,7 +64,7 @@ function yout = Neural_Trigger (X,P,B,strfuncion)
   yin=P*X+B;
 
   if (strfuncion=="step")
-    yout=double(yin);
+    yout=double(yin>=0);
   elseif (strfuncion=="soft")
     yout=log(1.+ exp(yin));
   elseif (strfuncion=="leak")

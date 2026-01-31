@@ -61,7 +61,7 @@ function W = Wavelet_Db8 (x, M)
   endif
 
 
-  % Coeficientes Daubechies Db4
+  % Coeficientes Daubechies Db8
   h0 =  0.0544158422;
   h1 =  0.3128715909;
   h2 =  0.6756307363;
@@ -73,7 +73,7 @@ function W = Wavelet_Db8 (x, M)
 
 
   H=[h0 h1 h2 h3 h4 h5 h6 h7];
-  G=[h7 -h6 h5 -h4 h3 -h2 h1 -h0];
+  G=[-h7 h6 -h5 h4 -h3 h2 -h1 h0];
 
   % Algoritmo
 

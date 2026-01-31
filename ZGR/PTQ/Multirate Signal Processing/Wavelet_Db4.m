@@ -68,7 +68,7 @@ function W = Wavelet_Db4 (x, M)
   h3=(1-sqrt(3))/(4*sqrt(2));
 
   H=[h0 h1 h2 h3];
-  G=[h3 -h2 h1 -h0];
+  G=[-h3 h2 -h1 h0];
 
   % Algoritmo
 
