@@ -6,7 +6,6 @@
 % Autor: Dr. Carlos Romero Pérez
 % fecha: 28/12/2025
 
-
 pkg load signal;
 
 
@@ -55,8 +54,8 @@ flag_run=1;
 
 while (flag_run==1)
   choice=menu("Escenarios","Súbita 1.15 Var=0.1","Súbita 1.15 Var=1", ...
-  "Rampa 10pu Var=0.1","Rampa 10pu Var=1","Oscilatorio","Súbita 1.5 Var=1", ...
-  "Salir");
+  "Rampa 10pu Var=0.1","Rampa 10pu Var=1","Oscilatorio","Súbita 1.1 Var=1", ...
+  "Rampa 20ms y subita 1.3","Salir");
   if (choice!=7)
     close("all");
   endif
@@ -65,22 +64,23 @@ while (flag_run==1)
   switch (choice)
     case {1}
       % Escenario 1: 1.	Subida súbita de la tensión del bus DC de valor nominal
-      % a 1.15 p.u mantenida 20ms, Varianza del ruido=0.1.
+      % a 1.15 p.u, Varianza del ruido=0.1.
       Vsobre=1.15;    % Sobretensión de dc
       Vper=zeros(1,N);
-      Vper(Nper:(Nper+Ntotper))=(Vsobre-1)*Vdcnom;
+      Vper(Nper:N)=(Vsobre-1)*Vdcnom;
       Vin=Vdc+Vper+sqrt(var2_low)*noise;
     case {2}
       % Escenario 2: 	Subida súbita de la tensión del bus DC de valor nominal
-      % a 1.15 p.u mantenida 20ms, Varianza del ruido=1.
+      % a 1.15 p.u, Varianza del ruido=1.
       Vsobre=1.15;    % Sobretensión de dc
       Vper=zeros(1,N);
-      Vper(Nper:(Nper+Ntotper))=(Vsobre-1)*Vdcnom;
+      Vper(Nper:N)=(Vsobre-1)*Vdcnom;
       Vin=Vdc+Vper+sqrt(var2_high)*noise;
     case {3}
       % Escenario 3: 	Subida en rampa 10pu/s de la tensión del bus DC de valor nominal
       % hasta 1.15 p.u. Varianza del ruido=0.1.
-      Vmaxover=Vdcnom*(Vover-1);
+      Vsobre=1.15;
+      Vmaxover=Vdcnom*(Vsobre-1);
       delta=Rampa*Vdcnom/Fs;
       Vper=zeros(1,N);
 
@@ -98,7 +98,8 @@ while (flag_run==1)
     case {4}
       % Escenario 3: 	Subida en rampa 10pu/s de la tensión del bus DC de valor nominal
       % hasta 1.15 p.u. Varianza del ruido=1.
-      Vmaxover=Vdcnom*(Vover-1);
+      Vsobre=1.15;
+      Vmaxover=Vdcnom*(Vsobre-1);
       delta=Rampa*Vdcnom/Fs;
       Vper=zeros(1,N);
 
@@ -133,11 +134,32 @@ while (flag_run==1)
     case {6}
       % Escenario 6: 1.	Subida súbita de la tensión del bus DC de valor nominal
       % a 1.1 p.u. Varianza del ruido=1.
-      Vsobre=1.15; % Sobretensión de dc
+      Vsobre=1.1; % Sobretensión de dc
       Vper=zeros(1,N);
       Vper(Nper:N)=(Vsobre-1)*Vdcnom;
-      Vin=Vdc+Vper+sqrt(var2_high)*noise*sqrt(0.01);
+      Vin=Vdc+Vper+sqrt(var2_high)*noise;
+
     case {7}
+      % Escenario 7: Subida en rampa 10 pu/s durante 20ms. Subida súbita a 1.3
+      % tras los 20ms
+      Vsobre=1.3;
+      Vmaxover=0.15*Vdcnom;
+      Vper=zeros(1,N);
+      delta=Rampa*Vdcnom/Fs;
+      ind=Nper;
+      Nrampa=floor(0.2*Fs);
+      while (ind<=(Nper+Nrampa))
+        Vaux=Vper(ind-1)+delta;
+        if (Vaux>=Vmaxover)
+          Vaux=Vmaxover;
+        endif
+        Vper(ind)=Vaux;
+        ind=ind+1;
+      endwhile
+      Vper(ind:N)=(Vsobre-1)*Vdcnom;
+      Vin=Vdc+Vper+sqrt(var2_high)*noise;
+
+    case {8}
       flag_run=0;
 
     otherwise
@@ -187,21 +209,25 @@ while (flag_run==1)
     endwhile
 
     if (flag==3)
-      disp("No se ha detectado fallo de sobretensión");
+      disp(" Convencional: No se ha detectado fallo de sobretensión");
     endif
 
     if (flag==2)
-      disp("Fallo inmediato de sobretensión t="), disp((ind-1)/Fs);
+      disp("Convencional: Fallo inmediato de sobretensión t="), disp((ind-1)/Fs);
     endif
 
     if (flag==1)
-      disp("Fallo de sobretensión t="), disp((ind-1)/Fs);
+      disp("Convencional: Fallo de sobretensión t="), disp((ind-1)/Fs);
     endif
 
 
+    % Preprocesado para detectar sobrepaso de umbral de alerta
+
+    Vprepo(l)=Vin(l)-(Vover*Vdcnom);
+
     % Método de Momentos estadísticos
 
-    M=RT_Momentos(Vin,Fs/Fred);
+    M=RT_Momentos(Vprepo,Fs/Fred);
 
     [vm1,in1]=max(M(1,:))
     [vm2,in2]=max(M(2,:))
@@ -219,17 +245,61 @@ while (flag_run==1)
 
     subplot(2,2,3);
     plot(t,M(3,:));
-    xlabel("t[s]");ylabel("Curtosis");grid;
+    xlabel("t[s]");ylabel("Asimetría");grid;
 
     subplot(2,2,4);
     plot(t,M(4,:));
-    xlabel("t[s]");ylabel("Asimetría");grid;
+    xlabel("t[s]");ylabel("Curtosis");grid;
+
+    % Detección Usando M0
+    Msubita=M(1,:)-Vfallo;
+    ind=floor(Fs/Fred);
+    flag=0;
+    alerta=0;
+
+    while (flag==0)
+      if (Msubita(ind)>0)
+        flag=2;
+      else
+        if (M(1,ind)>=0 && alerta==1)
+          count_pert=count_pert+1;
+          if (count_pert>=Noverfault)
+            flag=1;
+          endif
+        endif
+
+        if (M(1,ind)>=0 && alerta==0)
+          alerta=1;
+        endif
+      endif
+
+      ind=ind+1;
+      if (ind>N)
+        flag=3;
+      endif
+
+    endwhile
+
+     if (flag==3)
+      disp("Momentos: No se ha detectado fallo de sobretensión");
+    endif
+
+    if (flag==2)
+      disp("Momentos: Fallo inmediato de sobretensión t="), disp((ind-1)/Fs);
+    endif
+
+    if (flag==1)
+      disp("Momentos: Fallo de sobretensión t="), disp((ind-1)/Fs);
+    endif
 
 
     % Método Wavelet DB4 M=3
-    Wdb4=Wavelet_Db4(Vin,3);
+    Wdb4=Wavelet_Db4(Vprepo,3);
 
     Wavelet_Visor(Wdb4,Fs,3);
+
+
+
   endif
 
 endwhile
