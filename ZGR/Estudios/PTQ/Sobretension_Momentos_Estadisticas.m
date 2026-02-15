@@ -152,7 +152,7 @@ function EST = Sobretension_Momentos_Estadisticas (vin, alerta, fallo ,Nfallo, N
 
   for fil=1:5
     v(q)=R((fil-1)*20+q,3);
-    EST(fil,:)=[mean(v) max(v) min(v)];
+    EST(fil,:)=[mean(v) max(v) min(v) var(v)];
   endfor
 
 
