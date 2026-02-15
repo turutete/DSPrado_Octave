@@ -229,11 +229,6 @@ while (flag_run==1)
 
     M=RT_Momentos(Vprepo,Fs/Fred);
 
-    [vm1,in1]=max(M(1,:))
-    [vm2,in2]=max(M(2,:))
-    [vm3,in3]=max(M(3,:))
-    [vm4,in4]=max(M(4,:))
-
     figure(2);
     subplot(2,2,1);
     plot(t,M(1,:));
@@ -252,7 +247,7 @@ while (flag_run==1)
     xlabel("t[s]");ylabel("Curtosis");grid;
 
     % Detección Usando M0
-    Msubita=M(1,:)-Vfallo;
+    Msubita=M(1,:)-(Vfallo-Valerta);
     ind=floor(Fs/Fred);
     flag=0;
     alerta=0;

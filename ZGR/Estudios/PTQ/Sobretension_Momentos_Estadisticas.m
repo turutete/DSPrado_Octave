@@ -66,8 +66,7 @@ function EST = Sobretension_Momentos_Estadisticas (vin, alerta, fallo ,Nfallo, N
   R=zeros(trials,4);
   Anoise=sqrt([0.01 0.05 0.1 0.5 1]);
   casos=1;
-  dalerta=1016;
-  dfallo=4061;
+
 
 
 
@@ -76,30 +75,60 @@ function EST = Sobretension_Momentos_Estadisticas (vin, alerta, fallo ,Nfallo, N
       An=Anoise(indnoise);
       noise=An*randn(1,L);      % Vector de ruido
       x=vin+noise;
+      xprealer(1,:)=x(1,:)-alerta;
+      xprefall(1,:)=x(1,:)-fallo;
       casos=casos+1;
-      M=RT_Momentos(x,N);
+      Male=RT_Momentos(xprealer,N);
+      Mfall=RT_Momentos(xprefall,N);
 
 
-      % Detección de sobretensión por umbral en Curtosis
+      % Detección de sobretensión por M0
 
       ind=2*N;    %Se inicia a partir de las N+2 primeras muestras
       flag=0;
       antiglitch=Nfallo; % Número de detecciones consecutivas para asegurar fallo
       nfallos=0;
+      detector_asim=4;
+      flag_alerta=0;
+      flag_fallo=0;
 
 
       while (flag==0)
-        if (M(2,ind)>=dalerta && M(1,ind)>0)
+
+     %Seguimiento de alerta
+        if (Male(1,ind)>0&& flag_alerta==1)
           nfallos=nfallos+1;
-          if (nfallos>=antiglitch)
-            flag=1;
-          endif
         else
-          nfallos=0;
+          if (flag_alerta==1)
+            flag_alerta=0;
+            nfallos=0;
+          endif
         endif
-        if (M(2,ind)>=dfallo && M(1,ind)>0)
+
+        %Confirmación de fallo
+        if ((Mfall(3,ind)>detector_asim && Mfall(1,ind)>0)&& flag_fallo==1)
           flag=1;
+        else
+          if (flag_fallo==1)
+            flag_fallo=0;
+          endif
         endif
+
+      %Detector de disparo de alerta
+        if ((Male(3,ind)>detector_asim && Male(1,ind)>0)&& flag_alerta==0)
+          flag_alerta=1;
+          nfallos=nfallos+1;
+        endif
+
+        %Detector de disparo de fallo
+        if ((Mfall(3,ind)>detector_asim && Mfall(1,ind)>0)&& flag_fallo==0)
+          flag_fallo=1;
+        endif
+
+        if (nfallos>=antiglitch)
+            flag=1;
+        endif
+
         ind=ind+1;
 
         if (ind==L)
@@ -109,13 +138,13 @@ function EST = Sobretension_Momentos_Estadisticas (vin, alerta, fallo ,Nfallo, N
 
       if (flag==1)
         indfallo=ind-1;
-        varval=M(2,indfallo);
+        merval=x(indfallo);
       else
         indfallo=0;
-        varval=0;
+        merval=0;
       endif
 
-      R(veces,:)=[veces An^2 indfallo varval];
+      R(veces,:)=[veces An^2 indfallo merval];
 
   endfor
 
