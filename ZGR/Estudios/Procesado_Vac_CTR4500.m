@@ -1,5 +1,5 @@
 %
-% An?lisis del procesado tensiones AC en CTR4500 UL
+% Análisis del procesado tensiones AC en CTR4500 UL 
 %
 % Autor: Dr. Carlos Romero
 % Fecha: 28/11/2024
@@ -97,11 +97,12 @@ HP_F2_50_b2 = 0.995428793395430;
 
 
 % Frecuencias de muestreo
-fsampling=48000;         % IEC=49kHz. UL=48KHz
+fsampling_ul=48000;
+fsampling_iec=49000;
 fsampling_control=fsampling/16;
 
 
-% An?lisis de respuesta en frecuencia de los filtros IEC
+% Análisis de respuesta en frecuencia de los filtros IEC
 B250=[LP250b0, LP250b1,LP250b2];
 A250=[LP250a0, LP250a1,LP250a2];
 
@@ -120,16 +121,16 @@ A49K10=[LP49K10a0, LP49K10a1,LP49K10a2];
 B40=[HP40b0, HP40b1,HP40b2];
 A40=[HP40a0, HP40a1,HP40a2];
 
-% An?lisis de respuesta en frecuencia de los filtros UL
+% Análisis de respuesta en frecuencia de los filtros UL
 fsampling=fsampling_ul;
 B300=[LP_F2_300_b0, LP_F2_300_b1, LP_F2_300_b2];
-A300=[LP_F2_300_a0, LP_F2_300_a1, LP_F2_300_a2];
+A300=[LP_F2_300_a0, LP_F2_300_a1, LP_F2_300_a2];  
 
 B120=[LP_F2_120_b0, LP_F2_120_b1, LP_F2_120_b2];
-A120=[LP_F2_120_a0, LP_F2_120_a1, LP_F2_120_a1];
+A120=[LP_F2_120_a0, LP_F2_120_a1, LP_F2_120_a1];  
 
 B70=[LP_F2_70_b0, LP_F2_70_b1, LP_F2_70_b2];
-A70=[LP_F2_70_a0, LP_F2_70_a1, LP_F2_70_a2];
+A70=[LP_F2_70_a0, LP_F2_70_a1, LP_F2_70_a2];  
 
 B48K50=[LP_48K_ACQ_F2_50_b0, LP_48K_ACQ_F2_50_b1, LP_48K_ACQ_F2_50_b2];
 A48K50=[LP_48K_ACQ_F2_50_a0, LP_48K_ACQ_F2_50_a1, LP_48K_ACQ_F2_50_a2];
@@ -201,22 +202,22 @@ xlabel('f[Hz]');ylabel('BP70(f) dB');title('BP 70');
 
 figure(10);
 plot(W/pi*fsampling/2,GHP50+GLP70);
-xlabel('f[Hz]');ylabel('N? muestras');title('Retraso grupo BP 50-70');
+xlabel('f[Hz]');ylabel('Nª muestras');title('Retraso grupo BP 50-70');
 
 figure(11);
 plot(W/pi*fsampling/2,GLP300);
-xlabel('f[Hz]');ylabel('N? muestras');title('Retraso grupo LP 300');
+xlabel('f[Hz]');ylabel('Nª muestras');title('Retraso grupo LP 300');
 
 figure(12);
 plot(W/pi*fsampling/2,G48LP50);
-xlabel('f[Hz]');ylabel('N? muestras');title('Retraso grupo LP 48KHz 50');
+xlabel('f[Hz]');ylabel('Nª muestras');title('Retraso grupo LP 48KHz 50');
 
 figure(13);
 plot(W/pi*fsampling/2,G48LP10);
-xlabel('f[Hz]');ylabel('N? muestras');title('Retraso grupo LP 48KHz 10');
+xlabel('f[Hz]');ylabel('Nª muestras');title('Retraso grupo LP 48KHz 10');
 
 
-% Respuestas a Escal?n DC o AC UL
+% Respuestas a Escalón DC o AC UL
 n=1:4096;
 xin(n)=sin(2*pi*(n-1)*60/fsampling);
 xindc=ones(1,4096);
@@ -263,8 +264,8 @@ Vtr(n)=1.01*sin(2*pi*(n-1)*60/48000+2*pi/3);
 Kcp=2/3;
 Kh=1/2;
 
-Vd=Kcp*((xcos.*Vrs)+ (xcos4.*Vst) + (xcos2.*Vtr));
-Vq=Kcp*((-xsin.*Vrs)- (xsin4.*Vst) - (xsin2.*Vtr));
+Vd=Kcp*((xcos.*Vrs).+ (xcos4.*Vst) .+ (xcos2.*Vtr));
+Vq=Kcp*((-xsin.*Vrs).- (xsin4.*Vst) .- (xsin2.*Vtr));
 Vh=Kcp*Kh*(Vrs+Vst+Vtr);
 
 figure(18);
@@ -280,7 +281,7 @@ plot((n-1)/48000,Vh);
 xlabel('t[s]');ylabel('Vh(t)');title('Vh');
 
 
-
+  
 % Prueba hueco
 
 hueco=[ones(1,2048) 0.1*ones(1,2048)];
@@ -289,8 +290,8 @@ Vrsh=Vrs.*hueco;
 Vsth=0.99*Vst.*hueco;
 Vtrh=1.01*Vtr.*hueco;
 
-Vdh=Kcp*((xcos.*Vrsh)+ (xcos4.*Vsth) + (xcos2.*Vtrh));
-Vqh=Kcp*((-xsin.*Vrsh)- (xsin4.*Vsth) - (xsin2.*Vtrh));
+Vdh=Kcp*((xcos.*Vrsh).+ (xcos4.*Vsth) .+ (xcos2.*Vtrh));
+Vqh=Kcp*((-xsin.*Vrsh).- (xsin4.*Vsth) .- (xsin2.*Vtrh));
 Vhh=Kcp*Kh*(Vrsh+Vsth+Vtrh);
 
 figure(21);

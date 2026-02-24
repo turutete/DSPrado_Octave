@@ -60,7 +60,7 @@ Iequipo=Pac/Vequipo;              % Corriente de bus demandada por la carga
 %Rc_arco=2221;         % Ohms
 %alfa_arco=49.0874;    % V
 %beta_arco=1.4614;     % 1/A
-Rl_arco=0.1;            % ohms
+Rl_arco=10;            % ohms
 Vd=1300;
 Id=0.1;
 V0=25;
@@ -83,7 +83,7 @@ DenVz1=0;
 DenIz1=0;
 
 % Selector Panel
-ejemplo=2;
+ejemplo=3;
 
 switch (ejemplo)
   case 1
