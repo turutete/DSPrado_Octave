@@ -1,30 +1,33 @@
-## -*- texinfo -*-
-##
+
 ## Idc_Panel.m
+##
+##
+## idc_panel = Idc_Panel (Vdc,Su,T,Isc_panel,Voc_panel,Vmppt_panel,Imppt_panel,Ns,Np,alfa_isc,beta_voc)
 ##
 ## Esta función retorna la corriente DC de un panel fotovoltaico para
 ## unas condiciones de tensión de DC Vdc (V), irradiancia por unidad Su y
 ## temperatura T (ºC).
 ##
-## Los parámetros característicos del pane solar que se deben introducir son:
+## Los parámetros característicos del panel solar que se deben introducir son:
 ##
 ## Iscpanel: Corriente de cortocircuito del panel a 25ºC
+##
 ## Vocpanel: Tensión de circuito abierto del panel a 25ºC
+##
 ## Vmpptpanel: Tensión de mppt a 25ºC
+##
 ## Impptpanel: Corriente de mppt a 25ºC
+##
 ## alfa_isc: Coeficiente de temperatura de la corriente de cortocircuito
+##
 ## beta_voc: Coeficiente de temperatura de la tensión de circuito abierto
 ##
-## Copyright (C) 2025 Zigor R&D AIE
-## Author: Dr. Carlos Romero Pérez
-## Created: 2025-02-23
+## Ns: Número de celdas en serie
 ##
-## @deftypefn {}
-##{@var{idc_panel} =} Idc_Panel (@var{Vdc}, @var{Su}, @var{T}, @var{Isc_panel},
-## @var{Voc_panel},@var{Vmppt_panel},@var{Imppt_panel},@var{Ns},@var{Np},
-## @var{alfa_isc},@var{beta_voc})
+## Np: Número de celdas en paralelo
 ##
-## @end deftypefn
+##
+
 
 
 
@@ -88,16 +91,16 @@ function idc_panel = Idc_Panel (Vdc,Su,T,Isc_panel,Voc_panel,Vmppt_panel,Imppt_p
   I0=I0ref*(Tk/Tref)^3*e^(q*Eg*(1/Tref-1/Tk)/(K*A));
 
   % Cálculo de la corriente de celda
-  error_max=0.001;
+  error_max=0.000001;
   iteramax=1000;
   flagloop=0;
   itera=0;
 
   % Selección de valor inicial
-  if (V<=Vmppt)
+  if (V<=(Vmppt*0.9))
     In=Isc;
   else
-    In=Imppt;
+      In=Imppt;
   endif
 
   % Cálculo de la corriente de panel según condiciones
