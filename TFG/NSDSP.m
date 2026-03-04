@@ -20,7 +20,7 @@ endswitch
 flag_aleatorio=0;                 % 0:No hay variables aleatorias 1: Hay aleatoriedad
 
 # Inicialización de variables de entorno
-Fs=2450;                         % Freqcuencia de muestreo de las señales analógicas en Hz
+Fs=49000;                         % Freqcuencia de muestreo de las señales analógicas en Hz
 fred=50;                          % Frecuencia de la red eléctrica en Hz
 wred=2*pi*fred;
 Fcontrol=2450;                    % Frecuencia del control
@@ -32,7 +32,7 @@ Snom=4.5e6;                       % Potencia aparente nominal del equipo
 Plim=1;                           % Límite de potencia activa [0 1] pedida
 Qref=0;                           % Referencia de potencia reactiva [-1 1] pedida
 Lac=150e-6;                       % Inductancia del filtro LC en H
-Cdc=45e-3;                        % Condensador del bus DC en F
+Cdc=53e-3;                        % Condensador del bus DC en F
 M=1;                              % Índice de modulación por defecto (M=Vinv/(Vdc/2))
 
 %Niveles máximos eléctricos del equipo
@@ -43,61 +43,76 @@ Idcmax=Snom/Vdcnom*1.2;           % Umbral de sobrecorriente DC del equipo
 Iacmax=Snom/(3*Vfnrmsred)*1.2;    % Umbral de sobrecorriente AC del equipo
 Vacmax=Vfnrmsred*1.2+2*pi*fred*Lac*Iacmax; % Umbral de sobretensión AC del equipo
 
-porcentaje=zeros(1,N);
-
 
 # Selección del tipo de prueba
 tipo_arco="DC"; % Descomentar la opción del tipo de arco que se quiere hacer
 #tipo_arco="AC"
 
+if (inverter==0)
+  # Parámetros de modelado de paneles solares
+  # Se estudian 3 ejemplos de paneles solares:
+  # 1) Ejemplo de panel de artículo
+  # 2) Ejemplopanel TSM-DE14A
+  # 3) Ejemplo panel DS 600W monocristalino
 
-# Parámetros de modelado de paneles solares
-# Se estudian 3 ejemplos de paneles solares:
-# 1) Ejemplo de panel de artículo
-# 2) Ejemplopanel TSM-DE14A
-# 3) Ejemplo panel DS 600W monocristalino
+  % Selector Panel
+  ejemplo=3;
 
-% Selector Panel
-ejemplo=3;
+  switch (ejemplo)
+    case 1
+      % Artículo
+      Np=1;
+      Ns=60;
+      Iscpanel=8.85;
+      Vocpanel=37.85;
+      alfa_isc=0.062;
+      beta_vosc=-0.33;
+      Vmpptpanel=30.12;
+      Impptpanel=8.3;
+      Npanels=round(Vdcnom/Vmpptpanel);
+      Npanelp=round(Idcnom/Impptpanel);
+    case 2
+      % Ejemplo de panel solar real: TSM-DE14A
+      Np=3;
+      Ns=24;
+      Iscpanel=9.69;    %A
+      Vocpanel=47;      %V
+      alfa_isc=0.05;    %/ºC
+      beta_vosc=-0.29;  % %/ºC
+      Vmpptpanel=38.7;
+      Impptpanel=9.17;
+      Npanels=round(Vdcnom/Vmpptpanel);
+      Npanelp=round(Idcnom/Impptpanel);
+    case 3
+      % Ejemplo de panel solar DS new energy 600W monocristalino
+      Np=6;
+      Ns=20;
+      Iscpanel=18.57;     %A
+      Vocpanel=41.7;      %V
+      alfa_isc=0.046;    %/ºC
+      beta_vosc=-0.277;  % %/ºC
+      Vmpptpanel=34.6;
+      Impptpanel=17.49;
+      Npanels=round(Vdcnom/Vmpptpanel);
+      Npanelp=round(Idcnom/Impptpanel);
+  endswitch
 
-switch (ejemplo)
-  case 1
-    % Artículo
-    Np=1;
-    Ns=60;
-    Iscpanel=8.85;
-    Vocpanel=37.85;
-    alfa_isc=0.062;
-    beta_vosc=-0.33;
-    Vmpptpanel=30.12;
-    Impptpanel=8.3;
-    Npanels=round(Vdcnom/Vmpptpanel);
-    Npanelp=round(Idcnom/Impptpanel);
-  case 2
-    % Ejemplo de panel solar real: TSM-DE14A
-    Np=3;
-    Ns=24;
-    Iscpanel=9.69;    %A
-    Vocpanel=47;      %V
-    alfa_isc=0.05;    %/ºC
-    beta_vosc=-0.29;  % %/ºC
-    Vmpptpanel=38.7;
-    Impptpanel=9.17;
-    Npanels=round(Vdcnom/Vmpptpanel);
-    Npanelp=round(Idcnom/Impptpanel);
-  case 3
-    % Ejemplo de panel solar DS new energy 600W monocristalino
-    Np=6;
-    Ns=20;
-    Iscpanel=18.57;     %A
-    Vocpanel=41.7;      %V
-    alfa_isc=0.046;    %/ºC
-    beta_vosc=-0.277;  % %/ºC
-    Vmpptpanel=34.6;
-    Impptpanel=17.49;
-    Npanels=round(Vdcnom/Vmpptpanel);
-    Npanelp=round(Idcnom/Impptpanel);
-endswitch
+  # Aunque la potencia Snom del equipo dea 4.5MVA, la real es la que suministre
+  # el campo fotovoltaico
+  Vnomreal=Vmpptpanel*Npanels;
+  Inomreal=Impptpanel*Npanelp;
+  Snomreal=Vnomreal*Inomreal;
+endif
+
+if (inverter==1)
+  Vnomreal=1500;
+  Snomreal=Snom;
+  Inomreal=Snomreal/Vnomreal;
+
+endif
+
+
+
 
 % Modelo de arco eléctrico AC
 Rl_arco=10;   % Resistencia del circuito de carga al producirse el arco [ohms]
@@ -176,8 +191,8 @@ if (Sref>1)
   Qref=sign(Qref)*sqrt(1-Plim^2);
 endif
 
-Pfisica=Snom*Plim;  % Consignas de potencia demandadas por el operador de red
-Qfisica=Snom*Qref;
+Pfisica=Snomreal*Plim;  % Consignas de potencia demandadas por el operador de red
+Qfisica=Snomreal*Qref;
 
 # Este código define la irradiancia y la temperatura en la planta.
 # Según se haya seleccionado usar o no aleatoriedad, se usa unos valores de
@@ -233,7 +248,8 @@ if (Plim<1)
       flag_Pdc=1;             % La tensión del panel máxima de la de circuito abierto
     endif
 
-    Idcaux=Idc_Panel(Vdc,Su,T,Iscpanel,Vocpanel,Vmpptpanel,Impptpanel,Ns,Np,alfa_isc,beta_vosc);
+    %Idcaux=Idc_Panel(Vdc,Su,T,Iscpanel,Vocpanel,Vmpptpanel,Impptpanel,Ns,Np,alfa_isc,beta_vosc);
+    Idcaux=Idc_Panel_Modelo(Vdc,Iscpanel,Vocpanel, Vmpptpanel, Impptpanel);
     Pdaux=Vdc*Idcaux;
     if (abs(Pdaux-Pdcobj)<dPdcmin)
       dPdcmin=abs(Pdaux-Pdcobj);
@@ -245,7 +261,8 @@ if (Plim<1)
 else
   % Si Plim=1, se trabaja en Mppt
   Vdc=Vmpptpanel;
-  Idcaux=Idc_Panel(Vdc,Su,T,Iscpanel,Vocpanel,Vmpptpanel,Impptpanel,Ns,Np,alfa_isc,beta_vosc);
+  %Idcaux=Idc_Panel(Vdc,Su,T,Iscpanel,Vocpanel,Vmpptpanel,Impptpanel,Ns,Np,alfa_isc,beta_vosc);
+  Idcaux=Idc_Panel_Modelo(Vdc,Iscpanel,Vocpanel, Vmpptpanel, Impptpanel);
 endif
 
 
@@ -258,20 +275,17 @@ Idc=Idcaux*Npanelp;
 % Lo inicializamos al iniciar la simulación, cuando ya sabemos el valor
 % inicial de Vdc
 Kdc=1/(Cdc*Fs);
-Bdcz1=0;      % Valor inicial del retraso x(n-1) del filtro LP para n=0
 Adcz1=Vpv;    % Valor inicial del retraso y(n-1) del filtro LP para n=0
 
 Iarc=0;
 
 %Condición inicial de campo fotovoltaico
 Vdc=Vpv/Npanels;
-Idcaux=Idc_Panel(Vdc,Su,T,Iscpanel,Vocpanel,Vmpptpanel,Impptpanel,Ns,Np,alfa_isc,beta_vosc);
+%Idcaux=Idc_Panel(Vdc,Su,T,Iscpanel,Vocpanel,Vmpptpanel,Impptpanel,Ns,Np,alfa_isc,beta_vosc);
+Idcaux=Idc_Panel_Modelo(Vdc,Iscpanel,Vocpanel, Vmpptpanel, Impptpanel);
 Ipv=Idcaux*Npanelp;
 
 while (n<=N)
-
-  porcentaje(n)=(n-1)*100/N;
-  plot(q-1,porcentaje);
 
   % Conocido el valor de la tensión de bus DC, se puede calcular el valor de la
   % amplitud de las corrientes de fase Ir, Is, It para inyectar la Plim y Qref
@@ -285,22 +299,10 @@ while (n<=N)
   % is(t)=Im*cos(wred t + phi -2pi/3)
   % it(t)=Im*cos(wred t + phi +2pi/3)
   %
-  % Si se produce arco DC, la corriente Iarc debe ser alimentada por la
-  % corriente de paneles, por lo que la la amplitud Im decrece de la teóricamente
-  % calculada
 
-  Im=max(2/3*Sref*Snom/Vfnrmsred-Iarc,0);    % Im no puede ser negativo
+
+  Im=max(2/3*Sref*Snom/Vfnrmsred,0);    % Im no puede ser negativo
   phi=atan(Qref/Plim);
-
-  % Si se produce un arco en AC, la corriente AC de salida de la fase donde
-  % se produzca el arco aumentará con la corriente que consume el arco
-  % Supondremos siempre en esta simulación que se produce en la fase Ir
-  %
-  % ir(t)=Im cos(wred t +phi) + Iarc(t)
-  %
-  % Pero esto no afecta al cálculo de Vinvac, ya que lo que se usa para
-  % calcular el índice de modulación son las consignas Plim y Qref, no la medida
-  % de corrientes de fase real
 
   % Ahora queremos calcular la amplitud de la tensión de salida trifásica que
   % debe generar el inversor para inyectar la corriente trifásica que hemos
@@ -452,7 +454,7 @@ while (n<=N)
     iarcdc(n)=Iarc;
   endif
 
-  idc(n)=idcr+idcs+idct+Iarc;
+  idc(n)=idcr+idcs+idct;
 
   % Este idc(n) es el que consume la etapa de potencia para generar la amplitud
   % Vinvvac.
@@ -468,17 +470,49 @@ while (n<=N)
   % El valor de Vdc(t) se puede modelar en función de ipv(t)-idc(t) mediante
   % un filtro LP H(z)
   %
-  % H(z)=1/(Cdc*Fs)* Z^-1/(1-Z^-1)
+  % Vdc(n+1)=Vdc(n)+1/(Cdc*Fs) * (Ipv(n)-Idc(n) - Iarc(n))
   %
-  xinaux=Ipv-idc(n);
-  vdc(n)=Kdc*Bdcz1+Adcz1;
-  Bdcz1=xinaux;
+
+  % --- PASO 1: PREDICCIÓN (Euler simple) ---
+  % Calculamos la pendiente actual (derivada)
+  xinaux=Ipv-idc(n)-Iarc;
+  derivada_k=xinaux/Cdc;
+  % Predicción de la tensión en el siguiente instante
+  if (n==1)
+    Vdc_predict= Vpv + (1/Fs)*derivada_k;
+  else
+    Vdc_predict= vdc(n-1) + (1/Fs)*derivada_k;
+  endif
+
+  % --- PASO 2: CORRECCIÓN ---
+  % Calculamos la nueva Ipv y la nueva idc basada en la predicción
+  Vdc_panel_predict = Vdc_predict / Npanels;
+  Idcaux_predict = Idc_Panel_Modelo(Vdc_panel_predict, Iscpanel, Vocpanel, Vmpptpanel, Impptpanel);
+  Ipv_predict = Idcaux_predict * Npanelp;
+
+  % Para idc(n+1) usamos el siguiente valor de la sumatoria (n+1)
+  % [Cálculo de idc_predict usando (n+1)/Fs]
+  derivada_k_next = (Ipv_predict - idc_predict - Iarc) / Cdc;
+  % Valor final corregido (Promedio de pendientes)
+  if (n==1)
+    vdc(n) = Vpv + (1/(2*Fs)) * (derivada_k + derivada_k_next);
+  else
+    vdc(n) = vdc(n-1) + (1/(2*Fs)) * (derivada_k + derivada_k_next);
+  endif
+
+
+  % Actualizamos variables de estado para el siguiente ciclo
+  Vpv = vdc(n);
+  Adcz1 = Vpv;
+
+  vdc(n)=Kdc*xinaux+Adcz1;
   Adcz1=vdc(n);
   Vpv=vdc(n);       % Modificación de la tensión del bus por Ipv-Idc(n)
 
   %Esta tensión de bus impone un nuevo valor de corriente de panel Idc
   Vdc=Vpv/Npanels;
-  Idcaux=Idc_Panel(Vdc,Su,T,Iscpanel,Vocpanel,Vmpptpanel,Impptpanel,Ns,Np,alfa_isc,beta_vosc);
+  %Idcaux=Idc_Panel(Vdc,Su,T,Iscpanel,Vocpanel,Vmpptpanel,Impptpanel,Ns,Np,alfa_isc,beta_vosc);
+  Idcaux=Idc_Panel_Modelo(Vdc,Iscpanel,Vocpanel, Vmpptpanel, Impptpanel);
   Ipv=Idcaux*Npanelp;
 
   n=n+1;
