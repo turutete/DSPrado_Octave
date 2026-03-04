@@ -51,13 +51,13 @@ function Wavelet_Visor (W, Fs, M)
 
   figs = findall(0, 'Type', 'figure');
   max_fig = max(figs);
+  if (isempty(max_fig)==true)
+    max_fig=0;
+  endif
 
   N=floor(L/2^M);
   n=1:N;
   fs=Fs/2^M;
-  if(isempty(max_fig))
-    max_fig=1;
-  endif
 
   figure(max_fig+1);
   plot(n/fs,R(1,n));
