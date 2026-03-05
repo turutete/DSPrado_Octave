@@ -4,8 +4,8 @@
 #
 
 # Selección de tipo de inversor (Descomentar el tipo de inversor)
-inversor="PV";
-#inversor="PCS"
+#inversor="PV";
+inversor="PCS"
 
 switch (inversor)
   case {"PV"}
@@ -102,7 +102,12 @@ if (inverter==0)
   Vnomreal=Vmpptpanel*Npanels;
   Inomreal=Impptpanel*Npanelp;
   Snomreal=Vnomreal*Inomreal;
-endif
+else
+  # En el caso de ser un PCS, la fuente de DC son bateríss
+  Vnomreal=1500;
+  Inomreal=Snom/Vnomreal;
+  Snomreal=Snom;
+  endif
 
 if (inverter==1)
   Vnomreal=1500;
@@ -139,11 +144,11 @@ DenIz1=0;       % Retraso del filtro IIR corriente
 
 
 % Cálculo de puntos de trabajo
-dI=0.01;
-It=(-32768:32767).*dI;
-Vt=(alfa_arco*Rc_arco.*It)./(atan(beta_arco.*It).*It.*Rc_arco+alfa_arco); % Curva V-I arco
+%dI=0.01;
+%It=(-32768:32767).*dI;
+%Vt=(alfa_arco*Rc_arco.*It)./(atan(beta_arco.*It).*It.*Rc_arco+alfa_arco); % Curva V-I arco
 
-Vaval=max(Vt);  % Tensión aproximada de avalancha
+%Vaval=max(Vt);  % Tensión aproximada de avalancha
 
 
 if (tipo_arco=="DC")
@@ -151,6 +156,7 @@ if (tipo_arco=="DC")
 else
   flag_tipo_arco=1;
 endif
+
 
 # El código siguiente es el simulador dinámico de la planta+inversor+red
 # El simulador genera las tensiones y corriente de AC y DC
@@ -220,70 +226,76 @@ vacr(q)=Vfnrmsred*sqrt(2)*cos(wred*(q-1)/Fs);
 vacs(q)=Vfnrmsred*sqrt(2)*cos(wred*(q-1)/Fs-2*pi/3);
 vact(q)=Vfnrmsred*sqrt(2)*cos(wred*(q-1)/Fs+2*pi/3);
 
-% En esta simulación, Plim y Qref no varían. Son las consignas que piden
-% la eléctrica a la planta.
-%
-% En primer lugar, se comprueba si el límite de potencia Plim que piden es 1 o
-% menor que 1.
-% Si es 1, piden la máxima potencia, por lo que hay que trabajar en mppt.
-% Si es menor, el algoritmo de control del inversor calcula cuál debe ser
-% el valor del bus DC que haga que la potencia generada por los paneles
-% sea igual a la potencia demandada, evitando así que la tensión del bus
-% aumente y llegue a una sobretensión de ruptura
-if (Plim<1)
-  Vdc=Vmpptpanel;
-  Pdcobj=Plim*Snom/Npanelp;     % Calculamos por panel, no por inversor
-  Idcprev=Impptpanel;
-  Pdcprev=Vmpptpanel*Idcprev;
+if (inversor==0)
+  % En esta simulación, Plim y Qref no varían. Son las consignas que piden
+  % la eléctrica a la planta.
+  %
+  % En primer lugar, se comprueba si el límite de potencia Plim que piden es 1 o
+  % menor que 1.
+  % Si es 1, piden la máxima potencia, por lo que hay que trabajar en mppt.
+  % Si es menor, el algoritmo de control del inversor calcula cuál debe ser
+  % el valor del bus DC que haga que la potencia generada por los paneles
+  % sea igual a la potencia demandada, evitando así que la tensión del bus
+  % aumente y llegue a una sobretensión de ruptura
+  if (Plim<1)
+    Vdc=Vmpptpanel;
+    Pdcobj=Plim*Snom/Npanelp;     % Calculamos por panel, no por inversor
+    Idcprev=Impptpanel;
+    Pdcprev=Vmpptpanel*Idcprev;
 
-  while (flag_Pdc==0)
-    % Usamos la función Idc_Panel para calcular la corriente del panel para
-    % cada uno de los valores de Vdc que vamos a analizar.
-    % Vdc tomará valores en el intervalo [Vmpptpanel Vocpanel].
-    % Deben ser incrementos de Vdc pequeños, ya que la curva decrece a 0
-    % muy rápidamente
-    Vdc=Vdc*(1-dVdc);
-    if (Vdc<=Vocpanel)
-      Vdcpanel=Vocpanel;
-      flag_Pdc=1;             % La tensión del panel máxima de la de circuito abierto
-    endif
+    while (flag_Pdc==0)
+      % Usamos la función Idc_Panel para calcular la corriente del panel para
+      % cada uno de los valores de Vdc que vamos a analizar.
+      % Vdc tomará valores en el intervalo [Vmpptpanel Vocpanel].
+      % Deben ser incrementos de Vdc pequeños, ya que la curva decrece a 0
+      % muy rápidamente
+      Vdc=Vdc*(1-dVdc);
+      if (Vdc<=Vocpanel)
+        Vdcpanel=Vocpanel;
+        flag_Pdc=1;             % La tensión del panel máxima de la de circuito abierto
+      endif
 
+      %Idcaux=Idc_Panel(Vdc,Su,T,Iscpanel,Vocpanel,Vmpptpanel,Impptpanel,Ns,Np,alfa_isc,beta_vosc);
+      Idcaux=Idc_Panel_Modelo(Vdc,Iscpanel,Vocpanel, Vmpptpanel, Impptpanel);
+      Pdaux=Vdc*Idcaux;
+      if (abs(Pdaux-Pdcobj)<dPdcmin)
+        dPdcmin=abs(Pdaux-Pdcobj);
+      else
+        flag_Pdc=1;               % Encontrado el valor de Vdc que hace Ppanel=Plim
+      endif
+    endwhile
+
+  else
+    % Si Plim=1, se trabaja en Mppt
+    Vdc=Vmpptpanel;
     %Idcaux=Idc_Panel(Vdc,Su,T,Iscpanel,Vocpanel,Vmpptpanel,Impptpanel,Ns,Np,alfa_isc,beta_vosc);
     Idcaux=Idc_Panel_Modelo(Vdc,Iscpanel,Vocpanel, Vmpptpanel, Impptpanel);
-    Pdaux=Vdc*Idcaux;
-    if (abs(Pdaux-Pdcobj)<dPdcmin)
-      dPdcmin=abs(Pdaux-Pdcobj);
-    else
-      flag_Pdc=1;               % Encontrado el valor de Vdc que hace Ppanel=Plim
-    endif
-  endwhile
+  endif
 
-else
-  % Si Plim=1, se trabaja en Mppt
-  Vdc=Vmpptpanel;
+
+
+  % En este punto conocemos Idcpanel e Vdcpanel que hacen que Ppv=Plimt
+  % Lo generalizamos a los Npanelp en paralelo y Npanels y obtenmos Vdc, Idc de trabajo
+  Vpv=Vdc*Npanels;
+  Idc=Idcaux*Npanelp;
+
+  % Modelo de dependencia de Vbus de (ipv-idc)
+  % Lo inicializamos al iniciar la simulación, cuando ya sabemos el valor
+  % inicial de Vdc
+  Kdc=1/(Cdc*Fs);
+  Adcz1=Vpv;    % Valor inicial del retraso y(n-1) del filtro LP para n=0
+
+  Iarc=0;
+
+  %Condición inicial de campo fotovoltaico
+  Vdc=Vpv/Npanels;
   %Idcaux=Idc_Panel(Vdc,Su,T,Iscpanel,Vocpanel,Vmpptpanel,Impptpanel,Ns,Np,alfa_isc,beta_vosc);
   Idcaux=Idc_Panel_Modelo(Vdc,Iscpanel,Vocpanel, Vmpptpanel, Impptpanel);
+  Ipv=Idcaux*Npanelp;
+else
+  Vdc=Vdcnom;       % La tensión del bus es constante con baterías
 endif
 
-
-% En este punto conocemos Idcpanel e Vdcpanel que hacen que Ppv=Plimt
-% Lo generalizamos a los Npanelp en paralelo y Npanels y obtenmos Vdc, Idc de trabajo
-Vpv=Vdc*Npanels;
-Idc=Idcaux*Npanelp;
-
-% Modelo de dependencia de Vbus de (ipv-idc)
-% Lo inicializamos al iniciar la simulación, cuando ya sabemos el valor
-% inicial de Vdc
-Kdc=1/(Cdc*Fs);
-Adcz1=Vpv;    % Valor inicial del retraso y(n-1) del filtro LP para n=0
-
-Iarc=0;
-
-%Condición inicial de campo fotovoltaico
-Vdc=Vpv/Npanels;
-%Idcaux=Idc_Panel(Vdc,Su,T,Iscpanel,Vocpanel,Vmpptpanel,Impptpanel,Ns,Np,alfa_isc,beta_vosc);
-Idcaux=Idc_Panel_Modelo(Vdc,Iscpanel,Vocpanel, Vmpptpanel, Impptpanel);
-Ipv=Idcaux*Npanelp;
 
 while (n<=N)
 
@@ -322,17 +334,20 @@ while (n<=N)
 
   % El índice de modulación se obtiene de la expresión
   % Vinvvac=M*Vdc/2
-  if (n==1)
-    M=2*Vinvvac/(Vdc*Npanels);
-  else
-    M=2*Vinvvac/Vpv;
+    if (inversor==0)
+    if (n==1)
+      M=2*Vinvvac/(Vdc*Npanels);
+    else
+      M=2*Vinvvac/Vpv;
+    else
+      M=M=2*Vinvvac/Vpv;
   endif
 
   % Calculamos formas de onda en AC en el instante n
   if (flag_tipo_arco==1 && n>=indarc)
     % Cálculo de puntos de trabajo
     % Buscamos los punto de corte de la recta de carga con la V-I del arco
-    Vt2=vacr(n)-It.*Rl_arco;
+    Vt2=vacr(n)-It.*Rl_arco; ******* Por aquí *****
     % Cálculo rápido puntos corte
     if (abs(vacr(n))<=abs(Vaval))
       index_corte=Puntos_Corte(Vt,Vt2);
