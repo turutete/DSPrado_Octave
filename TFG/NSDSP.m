@@ -107,40 +107,8 @@ else
   Vnomreal=1500;
   Inomreal=Snom/Vnomreal;
   Snomreal=Snom;
-  endif
-
-if (inverter==1)
-  Vnomreal=1500;
-  Snomreal=Snom;
-  Inomreal=Snomreal/Vnomreal;
-
 endif
 
-
-
-
-% Modelo de arco eléctrico AC
-Rl_arco=10;   % Resistencia del circuito de carga al producirse el arco [ohms]
-Vd=900;       % Tensión de creación de canal
-Id=0.1;       % Corriente inicio de creación de canal
-V0=25;        % Tensión del arco
-
-alfa_arco=V0*pi/2;                % Parámetro alpha del modelo
-Rc_arco=Vd/Id;                    % Parámetros Rc del modelo
-beta_arco=tan(alfa_arco/Vd)/Id;   % Parámetro beta del modelo
-
-
-% Modelo dinámico del arco eléctrico
-tau_aval=100e-6; % Parámetro tau (modelamos el tiempo de formación del canal
-nest=tau_aval*Fs;
-tau=1/(Fs*(e^(2.3/nest)-1));
-
-a0=1+tau*Fs;    % Coeficientes del filtro IIR que modela la dinámica
-a1=-tau*Fs;
-Nom=1/a0;
-Den=a1/a0;
-DenVz1=0;       % Retraso del filto IIR tensión
-DenIz1=0;       % Retraso del filtro IIR corriente
 
 
 % Cálculo de puntos de trabajo
@@ -157,7 +125,6 @@ else
   flag_tipo_arco=1;
 endif
 
-
 # El código siguiente es el simulador dinámico de la planta+inversor+red
 # El simulador genera las tensiones y corriente de AC y DC
 # incluyendo el arco elegido, y su efecto en las tensiones y corrientes.
@@ -172,6 +139,8 @@ flag_Pdc=0;           % Se usa en el cálculo de Vdc de trabajo
 dVdc=0.01;            % Intervalo de búsqueda de Vdc
 dPdcmin=100;          % Valor inicial alto para primer punto de búsqueda
 flag_pdcmin=0;        % Se usa en el algoritmo de cálculo de Vdc
+flag_fallo_Idc=0;     % Se usan para mostrar sólo una vez el texto de fallo en consola
+flag_fallo_Iac=0;     % Se usan para mostrar sólo una vez el texto de fallo en consola
 
 % Formas de onda
 iacr=[];               % Forma de onda de la corriente de salida fase R
@@ -285,7 +254,6 @@ if (inversor==0)
   Kdc=1/(Cdc*Fs);
   Adcz1=Vpv;    % Valor inicial del retraso y(n-1) del filtro LP para n=0
 
-  Iarc=0;
 
   %Condición inicial de campo fotovoltaico
   Vdc=Vpv/Npanels;
@@ -293,7 +261,7 @@ if (inversor==0)
   Idcaux=Idc_Panel_Modelo(Vdc,Iscpanel,Vocpanel, Vmpptpanel, Impptpanel);
   Ipv=Idcaux*Npanelp;
 else
-  Vdc=Vdcnom;       % La tensión del bus es constante con baterías
+  Vpv=Vdcnom;       % La tensión del bus es constante con baterías
 endif
 
 
@@ -334,201 +302,144 @@ while (n<=N)
 
   % El índice de modulación se obtiene de la expresión
   % Vinvvac=M*Vdc/2
-    if (inversor==0)
+  if (inversor==0)
     if (n==1)
       M=2*Vinvvac/(Vdc*Npanels);
     else
       M=2*Vinvvac/Vpv;
-    else
-      M=M=2*Vinvvac/Vpv;
-  endif
-
-  % Calculamos formas de onda en AC en el instante n
-  if (flag_tipo_arco==1 && n>=indarc)
-    % Cálculo de puntos de trabajo
-    % Buscamos los punto de corte de la recta de carga con la V-I del arco
-    Vt2=vacr(n)-It.*Rl_arco; ******* Por aquí *****
-    % Cálculo rápido puntos corte
-    if (abs(vacr(n))<=abs(Vaval))
-      index_corte=Puntos_Corte(Vt,Vt2);
-      It_corte=(index_corte-32769).*dI;
-      Vt_corte=vacr(n)-It_corte.*Rl_arco;
-    else
-      V0=2*alfa_arco/pi;
-      It_corte=sign(vacr(n))*(abs(vacr(n))-V0)/Rl_arco;
-      Vt_corte=sign(vacr(n))*V0;
     endif
-
-    if start_arc==1
-      % El primer punto, se escoge en zona de descarga luminiscente
-      % si uno de los puntos de corte está en esta zona. Si no, se
-      % escoge el de mayor corriente en zona de avalancha
-      start_arc=0;
-      [Itn,indtn]=min(It_corte);
-
-      Vtn=Vt_corte(indtn);
-      Vtprev=Vtn;
-      Itprev=Itn;
-      Ptprev=Vtn*Itn;
-    else
-      Pn_vect=It_corte.*Vt_corte;
-      Pnprev_vect=Ptprev*ones(size(It_corte));
-      Pdif=abs(Pnprev_vect-Pn_vect);
-      [Pdifmin,indmin]=min(Pdif);
-      Vtn=Vt_corte(indmin);
-      Itn=It_corte(indmin);
-      Vtprev=Vtn;
-      Itprev=Itn;
-      Ptprev=Vtn*Itn;
-    endif
-
-    % Filtrado dinámico del arco
-    Varc=Vtn*Nom-DenVz1*Den;
-    DenVz1=Varc;
-    iarcac(n)=Itn*Nom-DenIz1*Den;
-    DenIz1=iarcac(n);
-  endif
-
-  % Si se ha producido arco AC las corrientes de fase medidas por el inversor
-  % serán:
-  %
-  % ir(t)= Im cos(wred t+ phi) + Iarc(t)
-  % is(t)= Im cos(wred t + phi -2pi/3)
-  % it(t)= Im cos(wred t + phi +2pi/3)
-
-  iacr(n)= Im*cos(wred*(n-1)/Fs+phi)+iarcac(n);
-  iacs(n)= Im*cos(wred*(n-1)/Fs+phi-2*pi/3);
-  iact(n)= Im*cos(wred*(n-1)/Fs+phi+2*pi/3);
-
-  % Analizamos ahora la parte de DC
-  %
-  % Hemos calculado el valor del íncide de modulación M necesario
-  % para generar el Plim que solicita la eléctrica.
-  %
-  % En un inversor con etapa de potencia en 3 niveles, el valor de la corriente
-  % en el bus de DC idc(t) se puede expresar del siguiente modo:
-  %
-  % idc(t)=Sum (M*cos(wx t)*(sign(cos(wx t)+1)/2))*Im*cos(wx t+phi)
-  %         x=r,s,t
-  %
-  % siendo wr t=wred t , ws t = wred t - 2pi/3  y wt t= wred t + 2pi/3
-  %
-  idcr=M*cos(wred*(n-1)/Fs)*(sign(cos(wred*(n-1)/Fs)+1)/2)*Im*cos(wred*(n-1)/Fs+phi);
-  idcs=M*cos(wred*(n-1)/Fs-2*pi/3)*(sign(cos(wred*(n-1)/Fs-2*pi/3)+1)/2)*Im*cos(wred*(n-1)/Fs-2*pi/3+phi);
-  idct=M*cos(wred*(n-1)/Fs+2*pi/3)*(sign(cos(wred*(n-1)/Fs+2*pi/3)+1)/2)*Im*cos(wred*(n-1)/Fs+2*pi/3+phi);
-
-
-  % En esta punto, añadimos la simulación de arco eléctrico en DC
-  %
-  % Si se produce, la corriente de arco DC deberá suministrarla el campo fotovoltaico
-
-   if (n>=indarc && flag_tipo_arco==0)
-    % Cálculo de puntos de trabajo
-    Vt2=vdc(n)-It.*Rl_arco;
-    % Cálculo rápido puntos corte
-    if (abs(vdc(n))<=abs(Vaval))
-      index_corte=Puntos_Corte(Vt,Vt2);
-      It_corte=(index_corte-32769).*dI;
-      Vt_corte=v-It_corte.*Rl_arco;
-    else
-      V0=2*alfa_arco/pi;
-      It_corte=sign(vdc(n))*(abs(vdc(n))-V0)/Rl_arco;
-      Vt_corte=sign(vdc(n))*V0;
-    endif
-
-    if start_arc==1
-      % El primer punto, se escoge en zona de descarga luminiscente
-      % si uno de los puntos de corte está en esta zona. Si no, se
-      % escoge el de mayor corriente en zona de avalancha
-      start_arc=0;
-      [Itn,indtn]=min(It_corte);
-
-      Vtn=Vt_corte(indtn);
-      Vtprev=Vtn;
-      Itprev=Itn;
-      Ptprev=Vtn*Itn;
-    else
-      Pn_vect=It_corte.*Vt_corte;
-      Pnprev_vect=Ptprev*ones(size(It_corte));
-      Pdif=abs(Pnprev_vect-Pn_vect);
-      [Pdifmin,indmin]=min(Pdif);
-      Vtn=Vt_corte(indmin);
-      Itn=It_corte(indmin);
-      Vtprev=Vtn;
-      Itprev=Itn;
-      Ptprev=Vtn*Itn;
-    endif
-
-    % Filtrado dinámico del arco
-    Varc=Vtn*Nom-DenVz1*Den;
-    DenVz1=Varc;
-
-    Iarc=Itn*Nom-DenIz1*Den;
-
-    DenIz1=Iarc;
-    iarcdc(n)=Iarc;
-  endif
-
-  idc(n)=idcr+idcs+idct;
-
-  % Este idc(n) es el que consume la etapa de potencia para generar la amplitud
-  % Vinvvac.
-  %
-  % Esta corriente la suministra el campo fotovoltaico. Esta corriente la
-  % puede suministrar porque la tensión del bus DC se ha regulado al punto.
-  %
-  % Si por cualquier motivo la corriente que consume idc es mayor que la que puede
-  % generar el campo, la energía la proporcionaría el C, y bajaría la tensión
-  % de bus. Si lo que ocurre es que baja el consumo de Idc, subiría la tensión
-  % de bus.
-  %
-  % El valor de Vdc(t) se puede modelar en función de ipv(t)-idc(t) mediante
-  % un filtro LP H(z)
-  %
-  % Vdc(n+1)=Vdc(n)+1/(Cdc*Fs) * (Ipv(n)-Idc(n) - Iarc(n))
-  %
-
-  % --- PASO 1: PREDICCIÓN (Euler simple) ---
-  % Calculamos la pendiente actual (derivada)
-  xinaux=Ipv-idc(n)-Iarc;
-  derivada_k=xinaux/Cdc;
-  % Predicción de la tensión en el siguiente instante
-  if (n==1)
-    Vdc_predict= Vpv + (1/Fs)*derivada_k;
   else
-    Vdc_predict= vdc(n-1) + (1/Fs)*derivada_k;
+    M=2*Vinvvac/Vpv;
   endif
 
-  % --- PASO 2: CORRECCIÓN ---
-  % Calculamos la nueva Ipv y la nueva idc basada en la predicción
-  Vdc_panel_predict = Vdc_predict / Npanels;
-  Idcaux_predict = Idc_Panel_Modelo(Vdc_panel_predict, Iscpanel, Vocpanel, Vmpptpanel, Impptpanel);
-  Ipv_predict = Idcaux_predict * Npanelp;
+  if (M>1.15)
+    M=1.15;         % Saturación que se pone al índice de modulación para no aumentar THD
+  endif
 
-  % Para idc(n+1) usamos el siguiente valor de la sumatoria (n+1)
-  % [Cálculo de idc_predict usando (n+1)/Fs]
-  derivada_k_next = (Ipv_predict - idc_predict - Iarc) / Cdc;
-  % Valor final corregido (Promedio de pendientes)
-  if (n==1)
-    vdc(n) = Vpv + (1/(2*Fs)) * (derivada_k + derivada_k_next);
+  % Generamos la corriente de arco, según sea el tipo de arco seleccionado
+  if (n>=indarc)
+    if (flag_tipo_arco==0)
+      Iarc=Genera_Iarc_RT(Vpv,Fs);
+    else
+      Iarc=Genera_Iarc_RT(vacr(n),Fs);   % El arco se produce en la fase R
+    endif
   else
-    vdc(n) = vdc(n-1) + (1/(2*Fs)) * (derivada_k + derivada_k_next);
+    Iarc=0;
   endif
 
+  iacr(n)=Iarc;
 
-  % Actualizamos variables de estado para el siguiente ciclo
-  Vpv = vdc(n);
-  Adcz1 = Vpv;
+  if (tipo_arco==0)
+    % Si se ha producido arco AC las corrientes de fase medidas por el inversor
+    % serán:
+    %
+    % ir(t)= Im cos(wred t+ phi) + Iarc(t)
+    % is(t)= Im cos(wred t + phi -2pi/3)
+    % it(t)= Im cos(wred t + phi +2pi/3)
 
-  vdc(n)=Kdc*xinaux+Adcz1;
-  Adcz1=vdc(n);
-  Vpv=vdc(n);       % Modificación de la tensión del bus por Ipv-Idc(n)
+    iacr(n)= Im*cos(wred*(n-1)/Fs+phi)+Iarc;
+    iacs(n)= Im*cos(wred*(n-1)/Fs+phi-2*pi/3);
+    iact(n)= Im*cos(wred*(n-1)/Fs+phi+2*pi/3);
+  else
+    % Analizamos ahora la parte de DC
+    %
+    % Hemos calculado el valor del íncide de modulación M necesario
+    % para generar el Plim que solicita la eléctrica.
+    %
+    % En un inversor con etapa de potencia en 3 niveles, el valor de la corriente
+    % en el bus de DC idc(t) se puede expresar del siguiente modo:
+    %
+    % idc(t)=Sum (M*cos(wx t)*(sign(cos(wx t)+1)/2))*Im*cos(wx t+phi)
+    %         x=r,s,t
+    %
+    % siendo wr t=wred t , ws t = wred t - 2pi/3  y wt t= wred t + 2pi/3
+    %
+    idcr=M*cos(wred*(n-1)/Fs)*((sign(cos(wred*(n-1)/Fs))+1)/2)*Im*cos(wred*(n-1)/Fs+phi);
+    idcs=M*cos(wred*(n-1)/Fs-2*pi/3)*((sign(cos(wred*(n-1)/Fs-2*pi/3))+1)/2)*Im*cos(wred*(n-1)/Fs-2*pi/3+phi);
+    idct=M*cos(wred*(n-1)/Fs+2*pi/3)*((sign(cos(wred*(n-1)/Fs+2*pi/3))+1)/2)*Im*cos(wred*(n-1)/Fs+2*pi/3+phi);
+    idc(n)=idcr+idcs+idct+Iarc;
+  endif
 
-  %Esta tensión de bus impone un nuevo valor de corriente de panel Idc
-  Vdc=Vpv/Npanels;
-  %Idcaux=Idc_Panel(Vdc,Su,T,Iscpanel,Vocpanel,Vmpptpanel,Impptpanel,Ns,Np,alfa_isc,beta_vosc);
-  Idcaux=Idc_Panel_Modelo(Vdc,Iscpanel,Vocpanel, Vmpptpanel, Impptpanel);
-  Ipv=Idcaux*Npanelp;
+  if (inversor==0)
+
+    % Este idc(n) es el que consume la etapa de potencia para generar la amplitud
+    % Vinvvac.
+    %
+    % Esta corriente la suministra el campo fotovoltaico. Esta corriente la
+    % puede suministrar porque la tensión del bus DC se ha regulado al punto.
+    %
+    % Si por cualquier motivo la corriente que consume idc es mayor que la que puede
+    % generar el campo, la energía la proporcionaría el C, y bajaría la tensión
+    % de bus. Si lo que ocurre es que baja el consumo de Idc, subiría la tensión
+    % de bus.
+    %
+    % El valor de Vdc(t) se puede modelar en función de ipv(t)-idc(t) mediante
+    % un filtro LP H(z)
+    %
+    % Vdc(n+1)=Vdc(n)+1/(Cdc*Fs) * (Ipv(n)-Idc(n) - Iarc(n))
+    %
+
+    % --- PASO 1: PREDICCIÓN (Euler simple) ---
+    % Calculamos la pendiente actual (derivada)
+    xinaux=Ipv-idc(n)-Iarc;
+    derivada_k=xinaux/Cdc;
+    % Predicción de la tensión en el siguiente instante
+    if (n==1)
+      Vdc_predict= Vpv + (1/Fs)*derivada_k;
+    else
+      Vdc_predict= vdc(n-1) + (1/Fs)*derivada_k;
+    endif
+
+    % --- PASO 2: CORRECCIÓN ---
+    % Calculamos la nueva Ipv y la nueva idc basada en la predicción
+    Vdc_panel_predict = Vdc_predict / Npanels;
+    Idcaux_predict = Idc_Panel_Modelo(Vdc_panel_predict, Iscpanel, Vocpanel, Vmpptpanel, Impptpanel);
+    Ipv_predict = Idcaux_predict * Npanelp;
+
+    % Para idc(n+1) usamos el siguiente valor de la sumatoria (n+1)
+    % [Cálculo de idc_predict usando (n+1)/Fs]
+    derivada_k_next = (Ipv_predict - idc_predict - Iarc) / Cdc;
+    % Valor final corregido (Promedio de pendientes)
+    if (n==1)
+      vdc(n) = Vpv + (1/(2*Fs)) * (derivada_k + derivada_k_next);
+    else
+      vdc(n) = vdc(n-1) + (1/(2*Fs)) * (derivada_k + derivada_k_next);
+    endif
+
+
+    % Actualizamos variables de estado para el siguiente ciclo
+    Vpv = vdc(n);
+    Adcz1 = Vpv;
+
+    vdc(n)=Kdc*xinaux+Adcz1;
+    Adcz1=vdc(n);
+    Vpv=vdc(n);       % Modificación de la tensión del bus por Ipv-Idc(n)
+
+    %Esta tensión de bus impone un nuevo valor de corriente de panel Idc
+    Vdc=Vpv/Npanels;
+    %Idcaux=Idc_Panel(Vdc,Su,T,Iscpanel,Vocpanel,Vmpptpanel,Impptpanel,Ns,Np,alfa_isc,beta_vosc);
+    Idcaux=Idc_Panel_Modelo(Vdc,Iscpanel,Vocpanel, Vmpptpanel, Impptpanel);
+    Ipv=Idcaux*Npanelp;
+
+    if (idc(n)>Idcmax && flag_fallo_Idc==0)
+      flag_fallo_Idc=1;
+      fprintf('Sobrecorriente DC Idc(%d)= %f\n', n, idc(n));
+    endif
+
+  else
+    % Caso PCS
+    if (idc(n)>(Idcmax*sqrt(2)) && flag_fallo_Idc==0)
+      flag_fallo_Idc=1;
+      fprintf('Sobrecorriente DC Idc(%d)= %f\n', n, idc(n));
+    endif
+
+    if (iacr(n)>Iacmax && flag_fall_Iac==0)
+      flag_fallo_Iac=1;
+      fprintf('Sobrecorriente Iacr(%d)= %f\n', n, iacr(n));
+    endif
+
+  endif
+
 
   n=n+1;
 
