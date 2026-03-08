@@ -3,18 +3,12 @@
 # de Señales No Estacionarias
 #
 
-# Selección de tipo de inversor (Descomentar el tipo de inversor)
-#inversor="PV";
-inversor="PCS"
+inverter= menu("TIPO INVERSOR","PV","PCS");
+inversor=inverter-1;
 
-switch (inversor)
-  case {"PV"}
-    inverter=0;
-  case {"PCS"}
-    inverter=1;
-  otherwise
-    inverter=0;
-endswitch
+flag_tipo_arco= menu("CASO DE USO","DC","AC","ESTABLE","PREF VARIABLE");
+
+flag_tipo_arco=flag_tipo_arco-1;
 
 % Inicialización de variables aleatorias
 flag_aleatorio=0;                 % 0:No hay variables aleatorias 1: Hay aleatoriedad
@@ -29,24 +23,30 @@ Vdcnom=1500;                      % Tensión nominal del bus DC en V
 Vffrmsred=690;                    % Tensión RMS fase fase
 Vfnrmsred=Vffrmsred/sqrt(3);      % Tensión RMS de red fase neutro
 Snom=4.5e6;                       % Potencia aparente nominal del equipo
-Plim=1;                           % Límite de potencia activa [0 1] pedida
-Qref=0;                           % Referencia de potencia reactiva [-1 1] pedida
 Lac=150e-6;                       % Inductancia del filtro LC en H
 Cdc=53e-3;                        % Condensador del bus DC en F
 M=1;                              % Índice de modulación por defecto (M=Vinv/(Vdc/2))
+rampa=Snom/10;                     % Rampa del 10% de la nominal
+
+# Consignas para el caso de uso PREF VARIABLE
+Pliminit=0.8;
+Qrefinit=sqrt(1-Pliminit^2);
+Ptarget=1;
+Qtarget=0;
+
+# Consignas para resto de casos de uso
+Plim=1;
+Qref=0;
+
 
 %Niveles máximos eléctricos del equipo
 Idcnom=Snom/Vdcnom;
 Vdcmax=Vdcnom*1.2;                % Umbral de sobretensión DC del equipo
 Idcmax=Snom/Vdcnom*1.2;           % Umbral de sobrecorriente DC del equipo
 
-Iacmax=Snom/(3*Vfnrmsred)*1.2;    % Umbral de sobrecorriente AC del equipo
-Vacmax=Vfnrmsred*1.2+2*pi*fred*Lac*Iacmax; % Umbral de sobretensión AC del equipo
+Iacmax=2*(Snom/3)/(Vfnrmsred*sqrt(2))*1.2;    % Umbral de sobrecorriente AC del equipo
+Vacmax=Vfnrmsred*sqrt(2)*1.2;                 % Umbral de sobretensión AC del equipo
 
-
-# Selección del tipo de prueba
-tipo_arco="DC"; % Descomentar la opción del tipo de arco que se quiere hacer
-#tipo_arco="AC"
 
 if (inverter==0)
   # Parámetros de modelado de paneles solares
@@ -119,12 +119,6 @@ endif
 %Vaval=max(Vt);  % Tensión aproximada de avalancha
 
 
-if (tipo_arco=="DC")
-  flag_tipo_arco=0;
-else
-  flag_tipo_arco=1;
-endif
-
 # El código siguiente es el simulador dinámico de la planta+inversor+red
 # El simulador genera las tensiones y corriente de AC y DC
 # incluyendo el arco elegido, y su efecto en las tensiones y corrientes.
@@ -141,6 +135,8 @@ dPdcmin=100;          % Valor inicial alto para primer punto de búsqueda
 flag_pdcmin=0;        % Se usa en el algoritmo de cálculo de Vdc
 flag_fallo_Idc=0;     % Se usan para mostrar sólo una vez el texto de fallo en consola
 flag_fallo_Iac=0;     % Se usan para mostrar sólo una vez el texto de fallo en consola
+flag_rampaP=0;        % Se usa en el control de la rampa de P
+flag_rampaQ=0;        % Se usa en el control de la rampa de Q
 
 % Formas de onda
 iacr=[];               % Forma de onda de la corriente de salida fase R
@@ -154,20 +150,10 @@ vact=[];               % Forma de onda de la tensión de salida T
 idc=[];                 % Corriente del bus DC
 vdc=[];                 % Tensión del bus DC
 
-varcdc=zeros(1,N);      % Tensión de arco DC
 iarcdc=zeros(1,N);      % Corriente de arco DC
-varcac=zeros(1,N);      % Tensión de arco AC
 iarcac=zeros(1,N);      % Corriente de arco AC
 
 
-# Control de las referencias de Plim y Qref
-Sref=sqrt(Plim^2+Qref^2);
-if (Sref>1)
-  Qref=sign(Qref)*sqrt(1-Plim^2);
-endif
-
-Pfisica=Snomreal*Plim;  % Consignas de potencia demandadas por el operador de red
-Qfisica=Snomreal*Qref;
 
 # Este código define la irradiancia y la temperatura en la planta.
 # Según se haya seleccionado usar o no aleatoriedad, se usa unos valores de
@@ -179,10 +165,12 @@ if (flag_aleatorio==0)
   Su=1;
   T=25;
   indarc=floor(N/2);    % El arco se inicia en la mitad de la simulación
+  indeven=floor(N/2);   % Muestra en la que se produce el evento no arco
 else
   Su=0.5+0.5*rand(1);    % Irradiancia por unidad S/Sref [0.5 - 1]
   T=25+15*(1-rand(1));   % Temperatura en ºC [25 - 40]
   indarc=floor(N/4+1/2*randn(1));   % El arco se inicia en algún punto [N/4 3N/4]
+  indeven=floor(N/4+1/2*randn(1));  % El evento no arco se inicia en algún punto [N/4 3N/4]
 endif
 
 % Generamos las tensiones AC.
@@ -267,11 +255,55 @@ endif
 
 while (n<=N)
 
+  % Este bloque se añade para los casos de uso donde se modifique Sref en un
+  % momento dado.
+  %
+  % Cuando cambia la consigna, el cambio lo hace siempre el inversor mediante
+  % una rampa. La pendiente de la rampa rampa (%VA/s) está definida al inicio
+  % del script
+
+  if (flag_tipo_arco==3)
+    if (n<=indeven)
+      Plim=Pliminit;          % Límite de potencia activa [0 1] pedida
+      Qref=Qrefinit;          % Referencia de potencia reactiva [-1 1] pedida
+    else
+      if (n==(indeven+1))
+        Plimprev=Pliminit;
+        Qrefprev=Qrefinit;
+        flag_rampaP=0;        % Indica '1' cuando se alcanza Ptarget
+        flag_rampaQ=0;        % Indica '1' cuando se alcanza Qtarget
+      endif
+      if (flag_rampaP==0)
+        Plim=Plimprev+rampa/Fs;
+        if (Plim>=Ptarget)
+          Plim=Ptarget;
+          flag_rampaP=1;
+        endif
+      endif
+      if (flag_rampaQ==0)
+        Qref=Qrefprev+sign(Qtarget)*rampa/Fs;
+        if ((Plim^2+Qref^2)>1)
+          Qref=sign(Qtarget)*sqrt(1-Plim^2);    % Prioridad P
+        endif
+
+        if (abs(Qref)>=abs(Qtarget))
+          Qref=Qtarget;
+          flag_rampaQ=1;
+        endif
+      endif
+    endif
+  else
+    Plim=1;       % Límite de potencia activa [0 1] pedida
+    Qref=0;       % Referencia de potencia reactiva [-1 1] pedida
+  endif
+
+  Sref=sqrt(Plim^2+Qref^2);
+
   % Conocido el valor de la tensión de bus DC, se puede calcular el valor de la
   % amplitud de las corrientes de fase Ir, Is, It para inyectar la Plim y Qref
   % solicitada. Llamamos a esta amplitud Im. También conocemos el desfase solicitado
   %
-  % Im=2/3* Sref/Vfnrmsred
+  % Im=2/3* Sref/(Vfnrmsred*sqrt(2))
   %
   % Conocido Im y phi, podremos generar la forma de onda de ir(t), is(t) e it(t)
   %
@@ -280,8 +312,7 @@ while (n<=N)
   % it(t)=Im*cos(wred t + phi +2pi/3)
   %
 
-
-  Im=max(2/3*Sref*Snom/Vfnrmsred,0);    % Im no puede ser negativo
+  Im=max(2/3*Sref*Snom/(Vfnrmsred*sqrt(2)),0);    % Im no puede ser negativo
   phi=atan(Qref/Plim);
 
   % Ahora queremos calcular la amplitud de la tensión de salida trifásica que
@@ -319,46 +350,49 @@ while (n<=N)
   % Generamos la corriente de arco, según sea el tipo de arco seleccionado
   if (n>=indarc)
     if (flag_tipo_arco==0)
-      Iarc=Genera_Iarc_RT(Vpv,Fs);
+      Iarcdc=Genera_Iarc_RT(Vpv,Fs);
+      Iarcac=0;
+      iarcdc(n)=Iarcdc;
     else
-      Iarc=Genera_Iarc_RT(vacr(n),Fs);   % El arco se produce en la fase R
+      Iarcac=Genera_Iarc_RT(vacr(n),Fs);   % El arco se produce en la fase R
+      Iarcdc=0;
+      iarcac(n)=Iarcac;
     endif
   else
-    Iarc=0;
+    Iarcac=0;
+    Iarcdc=0;
   endif
 
-  iacr(n)=Iarc;
+  % Si se ha producido arco AC las corrientes de fase medidas por el inversor
+  % serán:
+  %
+  % ir(t)= Im cos(wred t+ phi) + Iarc(t)
+  % is(t)= Im cos(wred t + phi -2pi/3)
+  % it(t)= Im cos(wred t + phi +2pi/3)
 
-  if (tipo_arco==0)
-    % Si se ha producido arco AC las corrientes de fase medidas por el inversor
-    % serán:
-    %
-    % ir(t)= Im cos(wred t+ phi) + Iarc(t)
-    % is(t)= Im cos(wred t + phi -2pi/3)
-    % it(t)= Im cos(wred t + phi +2pi/3)
+  iacr(n)= Im*cos(wred*(n-1)/Fs+phi)+Iarcac;
+  iacs(n)= Im*cos(wred*(n-1)/Fs+phi-2*pi/3);
+  iact(n)= Im*cos(wred*(n-1)/Fs+phi+2*pi/3);
 
-    iacr(n)= Im*cos(wred*(n-1)/Fs+phi)+Iarc;
-    iacs(n)= Im*cos(wred*(n-1)/Fs+phi-2*pi/3);
-    iact(n)= Im*cos(wred*(n-1)/Fs+phi+2*pi/3);
-  else
-    % Analizamos ahora la parte de DC
-    %
-    % Hemos calculado el valor del íncide de modulación M necesario
-    % para generar el Plim que solicita la eléctrica.
-    %
-    % En un inversor con etapa de potencia en 3 niveles, el valor de la corriente
-    % en el bus de DC idc(t) se puede expresar del siguiente modo:
-    %
-    % idc(t)=Sum (M*cos(wx t)*(sign(cos(wx t)+1)/2))*Im*cos(wx t+phi)
-    %         x=r,s,t
-    %
-    % siendo wr t=wred t , ws t = wred t - 2pi/3  y wt t= wred t + 2pi/3
-    %
-    idcr=M*cos(wred*(n-1)/Fs)*((sign(cos(wred*(n-1)/Fs))+1)/2)*Im*cos(wred*(n-1)/Fs+phi);
-    idcs=M*cos(wred*(n-1)/Fs-2*pi/3)*((sign(cos(wred*(n-1)/Fs-2*pi/3))+1)/2)*Im*cos(wred*(n-1)/Fs-2*pi/3+phi);
-    idct=M*cos(wred*(n-1)/Fs+2*pi/3)*((sign(cos(wred*(n-1)/Fs+2*pi/3))+1)/2)*Im*cos(wred*(n-1)/Fs+2*pi/3+phi);
-    idc(n)=idcr+idcs+idct+Iarc;
-  endif
+
+  % Analizamos ahora la parte de DC
+  %
+  % Hemos calculado el valor del íncide de modulación M necesario
+  % para generar el Plim que solicita la eléctrica.
+  %
+  % En un inversor con etapa de potencia en 3 niveles, el valor de la corriente
+  % en el bus de DC idc(t) se puede expresar del siguiente modo:
+  %
+  % idc(t)=Sum (M*cos(wx t)*(sign(cos(wx t)+1)/2))*Im*cos(wx t+phi)
+  %         x=r,s,t
+  %
+  % siendo wr t=wred t , ws t = wred t - 2pi/3  y wt t= wred t + 2pi/3
+  %
+  idcr=M*cos(wred*(n-1)/Fs)*((sign(cos(wred*(n-1)/Fs))+1)/2)*Im*cos(wred*(n-1)/Fs+phi);
+  idcs=M*cos(wred*(n-1)/Fs-2*pi/3)*((sign(cos(wred*(n-1)/Fs-2*pi/3))+1)/2)*Im*cos(wred*(n-1)/Fs-2*pi/3+phi);
+  idct=M*cos(wred*(n-1)/Fs+2*pi/3)*((sign(cos(wred*(n-1)/Fs+2*pi/3))+1)/2)*Im*cos(wred*(n-1)/Fs+2*pi/3+phi);
+  idc(n)=idcr+idcs+idct+Iarcdc;
+
 
   if (inversor==0)
 
@@ -428,21 +462,351 @@ while (n<=N)
 
   else
     % Caso PCS
-    if (idc(n)>(Idcmax*sqrt(2)) && flag_fallo_Idc==0)
+    if (flag_tipo_arco==0 && flag_fallo_Idc==0 && idc(n)>(Idcmax*sqrt(2)))
       flag_fallo_Idc=1;
       fprintf('Sobrecorriente DC Idc(%d)= %f\n', n, idc(n));
     endif
-
-    if (iacr(n)>Iacmax && flag_fall_Iac==0)
+    if (flag_tipo_arco==1 && flag_fallo_Iac==0 && iacr(n)>Iacmax)
       flag_fallo_Iac=1;
       fprintf('Sobrecorriente Iacr(%d)= %f\n', n, iacr(n));
     endif
-
   endif
 
 
   n=n+1;
 
 endwhile
+
+
+####################################################################
+#
+# ANÁLISIS DE SEÑALES
+#
+# COMPARACIÓN ENTRE MÉTODOS
+#
+#####################################################################
+
+idfig=1;
+
+# Análisis de la señal idc(n)
+
+
+#
+# Momentos estadísticos
+#
+# Escogemos 1 ciclo de red como ventana de análisis
+Mdc1=RT_Momentos(idc, Fs/fred);
+
+
+#
+# Wavelets Db4, Db8 y Lagrange
+#
+# Analizaremos inicialmente M=3, M=8.
+#
+# En el caso de Lagrange, usaremos R=8 8 coeficientes distintos de cero, para
+# comparar su eficacia respecto a Db8
+#
+
+WdcDb4m3=Wavelet_Db4(idc,3);
+WdcDb8m3=Wavelet_Db8(idc,3);
+WdcLR8m3=Bank_Lagrange(idc,3,8);
+
+
+WdcDb4m8=Wavelet_Db4(idc,8);
+WdcDb8m8=Wavelet_Db8(idc,8);
+WdcLR8m8=Bank_Lagrange(idc,8,8);
+
+# Análisis de las señales iacr
+
+# Primero veremos el análisis directo de las señales Iac
+
+# Momentos Estadísticos
+
+Miacr1=RT_Momentos(iacr,Fs/fred);
+Miacs1=RT_Momentos(iacs,Fs/fred);
+Miact1=RT_Momentos(iact,Fs/fred);
+
+
+# Wavelets
+WacrDb4m3=Wavelet_Db4(iacr,3);
+WacsDb4m3=Wavelet_Db4(iacs,3);
+WactDb4m3=Wavelet_Db4(iact,3);
+
+WacrDb8m3=Wavelet_Db8(iacr,3);
+WacsDb8m3=Wavelet_Db8(iacs,3);
+WactDb8m3=Wavelet_Db8(iact,3);
+
+WacrLR8m3=Bank_Lagrange(iacr,3,8);
+WacsLR8m3=Bank_Lagrange(iacs,3,8);
+WactLR8m3=Bank_Lagrange(iact,3,8);
+
+
+WacrDb4m8=Wavelet_Db4(iacr,8);
+WacsDb4m8=Wavelet_Db4(iacs,8);
+WactDb4m8=Wavelet_Db4(iact,8);
+
+WacrDb8m8=Wavelet_Db8(iacr,8);
+WacsDb8m8=Wavelet_Db8(iacs,8);
+WactDb8m8=Wavelet_Db8(iact,8);
+
+WacrLR8m8=Bank_Lagrange(iacr,8,8);
+WacsLR8m8=Bank_Lagrange(iacs,8,8);
+WactLR8m8=Bank_Lagrange(iact,8,8);
+
+# Usamos un preprocesado antes de usar Wavelets.
+#
+# Analizamos la transformada cd Clark de Iac
+
+
+for n=1:N
+  Y=Clark([iacr(n);iacs(n);iact(n)]);
+  ia(n)=Y(1);
+  ib(n)=Y(2);
+  iz(n)=Y(3);
+endfor
+
+Mia=RT_Momentos(ia,Fs/fred);
+Mib=RT_Momentos(ib,Fs/fred);
+Miz=RT_Momentos(iz,Fs/fred);
+
+WiaDb4m3=Wavelet_Db4(ia,3);
+WibDb4m3=Wavelet_Db4(ib,3);
+WizDb4m3=Wavelet_Db4(iz,3);
+
+WiaDb8m3=Wavelet_Db8(ia,3);
+WibDb8m3=Wavelet_Db8(ib,3);
+WizDb8m3=Wavelet_Db8(iz,3);
+
+WiaLR8m3=Bank_Lagrange(ia,3,8);
+WibLR8m3=Bank_Lagrange(ib,3,8);
+WizLR8m3=Bank_Lagrange(iz,3,8);
+
+
+WiaDb4m8=Wavelet_Db4(ia,8);
+WibDb4m8=Wavelet_Db4(ib,8);
+WizDb4m8=Wavelet_Db4(iz,8);
+
+WiaDb8m8=Wavelet_Db8(ia,8);
+WibDb8m8=Wavelet_Db8(ib,8);
+WizDb8m8=Wavelet_Db8(iz,8);
+
+WiaLR8m8=Bank_Lagrange(ia,8,8);
+WibLR8m8=Bank_Lagrange(ib,8,8);
+WizLR8m8=Bank_Lagrange(iz,8,8);
+
+
+########################################################
+#
+# PLOTS
+#
+# Para mostrar los momentos estadísticos, empezamos a partir de la
+# muestra 3*Fs/fred, para eliminar las primeras muestras de estabilización
+# de los filtros M1, M2, M3 y M4.
+#
+# Las Wavelets las mostramos mediante Wavelet_Visor. Aunque después
+# analizaremos las componentes de los wavelets que identificamos como
+# candidatas para se usadas como detectores
+#
+
+flag_loop=0;
+nmin=3*(Fs/fred);
+n=nmin:N;
+
+while (flag_loop==0)
+
+  select_plot=menu("Seleccionar plot","M idc", "M Irst","M Iabz","Db4 M=3", ...
+  "Db4 M=8", "Db8 M=3", "Db8 M=8", "Lagrange R=8 M=3", "Lagrange R=8 M=8", ...
+  "Salir");
+
+  % Estadísticos
+  switch (select_plot)
+    case {1}
+      % idc
+      close all;
+      idfig=1;
+      figure(idfig);
+      plot((n-nmin+1),Mdc1(1,n));
+      title(" Medida Mdc1");
+      idfig=idfig+1;
+      figure(idfig);
+      plot((n-nmin+1),Mdc1(2,n));
+      title("Varianza Mdc1");
+      idfig=idfig+1;
+      figure(idfig);
+      plot((n-nmin+1),Mdc1(3,n));
+      title("Asimetría Mdc1");
+      idfig=idfig+1;
+      figure(idfig);
+      plot((n-nmin+1),Mdc1(4,n));
+      title("Curtosis Mdc1");
+    case {2}
+      % ir, is, it
+      close all;
+      idfig=1;
+      figure(idfig);
+      subplot(3,1,1);
+      plot((n-nmin+1),Miacr1(1,n));
+      title("Media Ir");
+      subplot(3,1,2);
+      plot((n-nmin+1),Miacs1(1,n));
+      title("Media Is");
+      subplot(3,1,3);
+      plot((n-nmin+1),Miact1(1,n));
+      title(" Media It");
+
+      idfig=idfig+1;
+      figure(idfig);
+      subplot(3,1,1);
+      plot((n-nmin+1),Miacr1(2,n));
+      title("Varianza Ir");
+      subplot(3,1,2);
+      plot((n-nmin+1),Miacs1(2,n));
+      title("Varianza Is");
+      subplot(3,1,3);
+      plot((n-nmin+1),Miact1(2,n));
+      title(" Varianza It");
+
+      idfig=idfig+1;
+      figure(idfig);
+      subplot(3,1,1);
+      plot((n-nmin+1),Miacr1(3,n));
+      title("Asimetría Ir");
+      subplot(3,1,2);
+      plot((n-nmin+1),Miacs1(3,n));
+      title("Asimetría Is");
+      subplot(3,1,3);
+      plot((n-nmin+1),Miact1(3,n));
+      title(" Asimetría It");
+
+      idfig=idfig+1;
+      figure(idfig);
+      subplot(3,1,1);
+      plot((n-nmin+1),Miacr1(4,n));
+      title("Curtosis Ir");
+      subplot(3,1,2);
+      plot((n-nmin+1),Miacs1(4,n));
+      title("Curtosis Is");
+      subplot(3,1,3);
+      plot((n-nmin+1),Miact1(4,n));
+      title(" Curtosis It");
+    case {3}
+     % ia, ib, iz
+      close all;
+      idfig=1;
+      figure(idfig);
+      subplot(3,1,1);
+      plot((n-nmin+1),Mia(1,n));
+      title("Media Ia");
+      subplot(3,1,2);
+      plot((n-nmin+1),Mib(1,n));
+      title("Media Ib");
+      subplot(3,1,3);
+      plot((n-nmin+1),Miz(1,n));
+      title(" Media Iz");
+
+      idfig=idfig+1;
+      figure(idfig);
+      subplot(3,1,1);
+      plot((n-nmin+1),Mia(2,n));
+      title("Varianza Ia");
+      subplot(3,1,2);
+      plot((n-nmin+1),Mib(2,n));
+      title("Varianza Ib");
+      subplot(3,1,3);
+      plot((n-nmin+1),Miz(2,n));
+      title(" Varianza Iz");
+
+      idfig=idfig+1;
+      figure(idfig);
+      subplot(3,1,1);
+      plot((n-nmin+1),Mia(3,n));
+      title("Asimetría Ia");
+      subplot(3,1,2);
+      plot((n-nmin+1),Mib(3,n));
+      title("Asimetría Ib");
+      subplot(3,1,3);
+      plot((n-nmin+1),Miz(3,n));
+      title(" Asimetría Iz");
+
+      idfig=idfig+1;
+      figure(idfig);
+      subplot(3,1,1);
+      plot((n-nmin+1),Mia(4,n));
+      title("Curtosis Ia");
+      subplot(3,1,2);
+      plot((n-nmin+1),Mib(4,n));
+      title("Curtosis Ib");
+      subplot(3,1,3);
+      plot((n-nmin+1),Miz(4,n));
+      title(" Curtosis Iz");
+    case {4}
+      % DB4 M=3
+      close all;
+      Wavelet_Visor(WdcDb4m3,Fs,3);
+      Wavelet_Visor(WacrDb4m3,Fs,3);
+      Wavelet_Visor(WacsDb4m3,Fs,3);
+      Wavelet_Visor(WactDb4m3,Fs,3);
+      Wavelet_Visor(WiaDb4m3,Fs,3);
+      Wavelet_Visor(WibDb4m3,Fs,3);
+      Wavelet_Visor(WizDb4m3,Fs,3);
+    case {5}
+      % DB4 M=8
+      close all;
+      Wavelet_Visor(WdcDb4m8,Fs,8);
+      Wavelet_Visor(WacrDb4m8,Fs,8);
+      Wavelet_Visor(WacsDb4m8,Fs,8);
+      Wavelet_Visor(WactDb4m8,Fs,8);
+      Wavelet_Visor(WiaDb4m8,Fs,8);
+      Wavelet_Visor(WibDb4m8,Fs,8);
+      Wavelet_Visor(WizDb4m8,Fs,8);
+    case {6}
+      % DB8 M=3
+      close all;
+      Wavelet_Visor(WdcDb8m3,Fs,3);
+      Wavelet_Visor(WacrDb8m3,Fs,3);
+      Wavelet_Visor(WacsDb8m3,Fs,3);
+      Wavelet_Visor(WactDb8m3,Fs,3);
+      Wavelet_Visor(WiaDb8m3,Fs,3);
+      Wavelet_Visor(WibDb8m3,Fs,3);
+      Wavelet_Visor(WizDb8m3,Fs,3);
+    case {7}
+      % DB8 M=8
+      close all;
+      Wavelet_Visor(WdcDb8m8,Fs,8);
+      Wavelet_Visor(WacrDb8m8,Fs,8);
+      Wavelet_Visor(WacsDb8m8,Fs,8);
+      Wavelet_Visor(WactDb8m8,Fs,8);
+      Wavelet_Visor(WiaDb8m8,Fs,8);
+      Wavelet_Visor(WibDb8m8,Fs,8);
+      Wavelet_Visor(WizDb8m8,Fs,8);
+    case {8}
+      % Lagrange R=8 M=3
+      close all;
+      Wavelet_Visor(WdcLR8m3,Fs,3);
+      Wavelet_Visor(WacrLR8m3,Fs,3);
+      Wavelet_Visor(WacsLR8m3,Fs,3);
+      Wavelet_Visor(WactLR8m3,Fs,3);
+      Wavelet_Visor(WiaLR8m3,Fs,3);
+      Wavelet_Visor(WibLR8m3,Fs,3);
+      Wavelet_Visor(WizLR8m3,Fs,3);
+    case {9}
+      close all;
+      Wavelet_Visor(WdcLR8m8,Fs,8);
+      Wavelet_Visor(WacrLR8m8,Fs,8);
+      Wavelet_Visor(WacsLR8m8,Fs,8);
+      Wavelet_Visor(WactLR8m8,Fs,8);
+      Wavelet_Visor(WiaLR8m8,Fs,8);
+      Wavelet_Visor(WibLR8m8,Fs,8);
+      Wavelet_Visor(WizLR8m8,Fs,8);
+    case {10}
+      flag_loop=1;
+  endswitch
+endwhile
+
+
+
+
+
+
 
 
