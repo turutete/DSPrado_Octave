@@ -6,7 +6,7 @@
 inverter= menu("TIPO INVERSOR","PV","PCS");
 inversor=inverter-1;
 
-flag_tipo_arco= menu("CASO DE USO","DC","AC","ESTABLE","PREF VARIABLE");
+flag_tipo_arco= menu("CASO DE USO","DC","AC","ESTABLE","PREF VARIABLE","IM SÚBITA");
 
 flag_tipo_arco=flag_tipo_arco-1;
 
@@ -14,11 +14,11 @@ flag_tipo_arco=flag_tipo_arco-1;
 flag_aleatorio=0;                 % 0:No hay variables aleatorias 1: Hay aleatoriedad
 
 # Inicialización de variables de entorno
-Fs=49000;                         % Freqcuencia de muestreo de las señales analógicas en Hz
+Fs=49000/4 ;                        % Freqcuencia de muestreo de las señales analógicas en Hz
 fred=50;                          % Frecuencia de la red eléctrica en Hz
 wred=2*pi*fred;
 Fcontrol=2450;                    % Frecuencia del control
-N=4096;                          % Número de muestras de la simulación
+N=65536;                          % Número de muestras de la simulación
 Vdcnom=1500;                      % Tensión nominal del bus DC en V
 Vffrmsred=690;                    % Tensión RMS fase fase
 Vfnrmsred=Vffrmsred/sqrt(3);      % Tensión RMS de red fase neutro
@@ -26,17 +26,30 @@ Snom=4.5e6;                       % Potencia aparente nominal del equipo
 Lac=150e-6;                       % Inductancia del filtro LC en H
 Cdc=53e-3;                        % Condensador del bus DC en F
 M=1;                              % Índice de modulación por defecto (M=Vinv/(Vdc/2))
-rampa=Snom/10;                     % Rampa del 10% de la nominal
+rampa=0.1;                        % Rampa %Snominal/s
 
 # Consignas para el caso de uso PREF VARIABLE
 Pliminit=0.8;
-Qrefinit=sqrt(1-Pliminit^2);
+Qrefinit=0.1;
 Ptarget=1;
 Qtarget=0;
 
 # Consignas para resto de casos de uso
 Plim=1;
 Qref=0;
+
+# Control de S<=1
+if ((Pliminit^2+Qrefinit^2)>1)
+  Qrefinit=sign(Qrefinit)*sqrt(1-Pliminit^2);
+endif
+
+if ((Ptarget^2+Qtarget^2)>1)
+  Qtarget=sign(Qtarget)*sqrt(1-Ptarget^2);
+endif
+
+ if ((Plim^2+Qref^2)>1)
+  Qref=sign(Qref)*sqrt(1-Plim^2);
+endif
 
 
 %Niveles máximos eléctricos del equipo
@@ -262,6 +275,11 @@ while (n<=N)
   % una rampa. La pendiente de la rampa rampa (%VA/s) está definida al inicio
   % del script
 
+  if (flag_tipo_arco==0 || flag_tipo_arco==1 || flag_tipo_arco==2)
+    Plim=1;       % Límite de potencia activa [0 1] pedida
+    Qref=0;       % Referencia de potencia reactiva [-1 1] pedida
+  endif
+
   if (flag_tipo_arco==3)
     if (n<=indeven)
       Plim=Pliminit;          % Límite de potencia activa [0 1] pedida
@@ -272,29 +290,45 @@ while (n<=N)
         Qrefprev=Qrefinit;
         flag_rampaP=0;        % Indica '1' cuando se alcanza Ptarget
         flag_rampaQ=0;        % Indica '1' cuando se alcanza Qtarget
+        signop=sign(Ptarget-Pliminit);
+        signoq=sign(Qtarget-Qrefinit);
       endif
       if (flag_rampaP==0)
-        Plim=Plimprev+rampa/Fs;
-        if (Plim>=Ptarget)
+        Plim=Plimprev+signop*(rampa/Fs);
+        if (signop==1 && Plim>=Ptarget)
+          Plim=Ptarget;
+          flag_rampaP=1;
+        endif
+        if (signop==-1 && Plim<=Ptarget)
           Plim=Ptarget;
           flag_rampaP=1;
         endif
       endif
       if (flag_rampaQ==0)
-        Qref=Qrefprev+sign(Qtarget)*rampa/Fs;
+        Qref=Qrefprev+signoq*(rampa/Fs);
         if ((Plim^2+Qref^2)>1)
-          Qref=sign(Qtarget)*sqrt(1-Plim^2);    % Prioridad P
+          Qref=sign(Qref)*sqrt(1-Plim^2);    % Prioridad P
         endif
 
-        if (abs(Qref)>=abs(Qtarget))
+        if ((signoq==1 && Qref>=Qtarget ) || (signoq==-1 && Qref<=Qtarget))
           Qref=Qtarget;
           flag_rampaQ=1;
         endif
       endif
     endif
-  else
-    Plim=1;       % Límite de potencia activa [0 1] pedida
-    Qref=0;       % Referencia de potencia reactiva [-1 1] pedida
+  endif
+
+
+  if (flag_tipo_arco==4)
+    # Caso no realista que en el instante de inicio del evento, la Potencia P
+    # forma paulatina al 100% y Q=0%, sin rampa
+    if (n<indeven)
+      Plim=Pliminit;          % Límite de potencia activa [0 1] pedida
+      Qref=Qrefinit;          % Referencia de potencia reactiva [-1 1] pedida
+    else
+      Plim=1;
+      Qref=0;
+    endif
   endif
 
   Sref=sqrt(Plim^2+Qref^2);
@@ -353,10 +387,13 @@ while (n<=N)
       Iarcdc=Genera_Iarc_RT(Vpv,Fs);
       Iarcac=0;
       iarcdc(n)=Iarcdc;
-    else
+    elseif (flag_tipo_arco==1)
       Iarcac=Genera_Iarc_RT(vacr(n),Fs);   % El arco se produce en la fase R
       Iarcdc=0;
       iarcac(n)=Iarcac;
+    else
+      Iarcac=0;
+      Iarcdc=0;
     endif
   else
     Iarcac=0;
