@@ -407,7 +407,7 @@ while (n<=N)
   % is(t)= Im cos(wred t + phi -2pi/3)
   % it(t)= Im cos(wred t + phi +2pi/3)
 
-  iacr(n)= Im*cos(wred*(n-1)/Fs+phi)+Iarcac;
+  iacr(n)= Im*cos(wred*(n-1)/Fs+phi)-Iarcac;
   iacs(n)= Im*cos(wred*(n-1)/Fs+phi-2*pi/3);
   iact(n)= Im*cos(wred*(n-1)/Fs+phi+2*pi/3);
 
