@@ -425,6 +425,7 @@ while (n<=N)
   %
   % siendo wr t=wred t , ws t = wred t - 2pi/3  y wt t= wred t + 2pi/3
   %
+
   idcr=M*cos(wred*(n-1)/Fs)*((sign(cos(wred*(n-1)/Fs))+1)/2)*Im*cos(wred*(n-1)/Fs+phi);
   idcs=M*cos(wred*(n-1)/Fs-2*pi/3)*((sign(cos(wred*(n-1)/Fs-2*pi/3))+1)/2)*Im*cos(wred*(n-1)/Fs-2*pi/3+phi);
   idct=M*cos(wred*(n-1)/Fs+2*pi/3)*((sign(cos(wred*(n-1)/Fs+2*pi/3))+1)/2)*Im*cos(wred*(n-1)/Fs+2*pi/3+phi);
@@ -513,123 +514,6 @@ while (n<=N)
   n=n+1;
 
 endwhile
-
-
-####################################################################
-#
-# ANÁLISIS DE SEÑALES
-#
-# COMPARACIÓN ENTRE MÉTODOS
-#
-#####################################################################
-
-idfig=1;
-
-# Análisis de la señal idc(n)
-
-
-#
-# Momentos estadísticos
-#
-# Escogemos 1 ciclo de red como ventana de análisis
-Mdc1=RT_Momentos(idc, Fs/fred);
-
-
-#
-# Wavelets Db4, Db8 y Lagrange
-#
-# Analizaremos inicialmente M=3, M=8.
-#
-# En el caso de Lagrange, usaremos R=8 8 coeficientes distintos de cero, para
-# comparar su eficacia respecto a Db8
-#
-
-WdcDb4m3=Wavelet_Db4(idc,3);
-WdcDb8m3=Wavelet_Db8(idc,3);
-WdcLR8m3=Bank_Lagrange(idc,3,8);
-
-
-WdcDb4m8=Wavelet_Db4(idc,8);
-WdcDb8m8=Wavelet_Db8(idc,8);
-WdcLR8m8=Bank_Lagrange(idc,8,8);
-
-# Análisis de las señales iacr
-
-# Primero veremos el análisis directo de las señales Iac
-
-# Momentos Estadísticos
-
-Miacr1=RT_Momentos(iacr,Fs/fred);
-Miacs1=RT_Momentos(iacs,Fs/fred);
-Miact1=RT_Momentos(iact,Fs/fred);
-
-
-# Wavelets
-WacrDb4m3=Wavelet_Db4(iacr,3);
-WacsDb4m3=Wavelet_Db4(iacs,3);
-WactDb4m3=Wavelet_Db4(iact,3);
-
-WacrDb8m3=Wavelet_Db8(iacr,3);
-WacsDb8m3=Wavelet_Db8(iacs,3);
-WactDb8m3=Wavelet_Db8(iact,3);
-
-WacrLR8m3=Bank_Lagrange(iacr,3,8);
-WacsLR8m3=Bank_Lagrange(iacs,3,8);
-WactLR8m3=Bank_Lagrange(iact,3,8);
-
-
-WacrDb4m8=Wavelet_Db4(iacr,8);
-WacsDb4m8=Wavelet_Db4(iacs,8);
-WactDb4m8=Wavelet_Db4(iact,8);
-
-WacrDb8m8=Wavelet_Db8(iacr,8);
-WacsDb8m8=Wavelet_Db8(iacs,8);
-WactDb8m8=Wavelet_Db8(iact,8);
-
-WacrLR8m8=Bank_Lagrange(iacr,8,8);
-WacsLR8m8=Bank_Lagrange(iacs,8,8);
-WactLR8m8=Bank_Lagrange(iact,8,8);
-
-# Usamos un preprocesado antes de usar Wavelets.
-#
-# Analizamos la transformada cd Clark de Iac
-
-
-for n=1:N
-  Y=Clark([iacr(n);iacs(n);iact(n)]);
-  ia(n)=Y(1);
-  ib(n)=Y(2);
-  iz(n)=Y(3);
-endfor
-
-Mia=RT_Momentos(ia,Fs/fred);
-Mib=RT_Momentos(ib,Fs/fred);
-Miz=RT_Momentos(iz,Fs/fred);
-
-WiaDb4m3=Wavelet_Db4(ia,3);
-WibDb4m3=Wavelet_Db4(ib,3);
-WizDb4m3=Wavelet_Db4(iz,3);
-
-WiaDb8m3=Wavelet_Db8(ia,3);
-WibDb8m3=Wavelet_Db8(ib,3);
-WizDb8m3=Wavelet_Db8(iz,3);
-
-WiaLR8m3=Bank_Lagrange(ia,3,8);
-WibLR8m3=Bank_Lagrange(ib,3,8);
-WizLR8m3=Bank_Lagrange(iz,3,8);
-
-
-WiaDb4m8=Wavelet_Db4(ia,8);
-WibDb4m8=Wavelet_Db4(ib,8);
-WizDb4m8=Wavelet_Db4(iz,8);
-
-WiaDb8m8=Wavelet_Db8(ia,8);
-WibDb8m8=Wavelet_Db8(ib,8);
-WizDb8m8=Wavelet_Db8(iz,8);
-
-WiaLR8m8=Bank_Lagrange(ia,8,8);
-WibLR8m8=Bank_Lagrange(ib,8,8);
-WizLR8m8=Bank_Lagrange(iz,8,8);
 
 
 
