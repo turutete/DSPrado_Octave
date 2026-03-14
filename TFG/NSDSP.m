@@ -13,8 +13,11 @@ flag_tipo_arco=flag_tipo_arco-1;
 % Inicialización de variables aleatorias
 flag_aleatorio=0;                 % 0:No hay variables aleatorias 1: Hay aleatoriedad
 
+% Selecciona modelo de corriente DC
+modelo_idc=1;   % 0: Modelo simple idc es senoide 300Hz 1: Modelo real conmutación
+
 # Inicialización de variables de entorno
-Fs=49000/4 ;                        % Freqcuencia de muestreo de las señales analógicas en Hz
+Fs=49000 ;                        % Freqcuencia de muestreo de las señales analógicas en Hz
 fred=50;                          % Frecuencia de la red eléctrica en Hz
 wred=2*pi*fred;
 Fcontrol=2450;                    % Frecuencia del control
@@ -363,7 +366,7 @@ while (n<=N)
   %
   % El módulo es:
 
-  Vinvvac=sqrt((Vfnrmsred-wred*Lac*Im*sin(phi))^2+(wred*Lac*Im*cos(phi))^2);
+  Vinvvac=sqrt((Vfnrmsred*sqrt(2)-wred*Lac*Im*sin(phi))^2+(wred*Lac*Im*cos(phi))^2);
 
   % El índice de modulación se obtiene de la expresión
   % Vinvvac=M*Vdc/2
@@ -420,16 +423,124 @@ while (n<=N)
   % En un inversor con etapa de potencia en 3 niveles, el valor de la corriente
   % en el bus de DC idc(t) se puede expresar del siguiente modo:
   %
+  % Modelo 0:
   % idc(t)=Sum (M*cos(wx t)*(sign(cos(wx t)+1)/2))*Im*cos(wx t+phi)
   %         x=r,s,t
   %
   % siendo wr t=wred t , ws t = wred t - 2pi/3  y wt t= wred t + 2pi/3
   %
+  % Modelo 1:
+  %
+  % Se genera la portadora PWM v_tri que es una triangular de frecuencia
+  % Fcontrol. Esta portadora se usa para genera las PWM de cada fase Sx.
+  %
+  % mod_x= M* cos(wredx t)
+  %
+  % Por cada fase hay 2 PWM, la de los igbt para el ciclo positivo y los igbt
+  % del ciclo negativo
+  %
+  % Spx = (mod_x>0)*(mod_x>=v_tri)
+  % Snx = (mod_x<0)*(mod_x<=-v_tri)
+  %
+  % Spx y Sns son señales digitals (0,1). '1' activa los igbts de la rama positiva
+  % o negativa, según sea el semiperiodo de la moduladora (que es la señal que
+  % se está codificando.
+  %
+  % Las corrientes de la rama positva y negativa vendrán dadas por:
+  %
+  % idcpx=Spx*Im*cos(wredx t +phi)
+  % idcnx=SnxÎm*cons(wredx t +phi)
+  %
+  % La corriente idcx de cada fase viene dada por la contribución
+  % de la corriente durante el semiperiodo positivo y el negativo:
+  %
+  % idcx=idcpx+idcnx
+  %
+  % siendo:
+  %
+  % (wredx t) = (2pi fref (n-1)/Fs+phix)
+  %
+  % donde phix=0, -2pi/3, 2pi/3
+  %
+  % Estas señales de idcx son realistas, no como la del modelo 0
+  %
 
-  idcr=M*cos(wred*(n-1)/Fs)*((sign(cos(wred*(n-1)/Fs))+1)/2)*Im*cos(wred*(n-1)/Fs+phi);
-  idcs=M*cos(wred*(n-1)/Fs-2*pi/3)*((sign(cos(wred*(n-1)/Fs-2*pi/3))+1)/2)*Im*cos(wred*(n-1)/Fs-2*pi/3+phi);
-  idct=M*cos(wred*(n-1)/Fs+2*pi/3)*((sign(cos(wred*(n-1)/Fs+2*pi/3))+1)/2)*Im*cos(wred*(n-1)/Fs+2*pi/3+phi);
-  idc(n)=idcr+idcs+idct+Iarcdc;
+  if (modelo_idc==0)
+    idcr=M*cos(wred*(n-1)/Fs)*((sign(cos(wred*(n-1)/Fs))+1)/2)*Im*cos(wred*(n-1)/Fs+phi);
+    idcs=M*cos(wred*(n-1)/Fs-2*pi/3)*((sign(cos(wred*(n-1)/Fs-2*pi/3))+1)/2)*Im*cos(wred*(n-1)/Fs-2*pi/3+phi);
+    idct=M*cos(wred*(n-1)/Fs+2*pi/3)*((sign(cos(wred*(n-1)/Fs+2*pi/3))+1)/2)*Im*cos(wred*(n-1)/Fs+2*pi/3+phi);
+  endif
+  if (modelo_idc==1)
+    % Generamos la señal triangular, que es la misma para las 3 fases
+    if (n==1)
+      % Calculamos la señal completa para toda la simulación. Por eso sólo lo
+      % hacemos una vez, cuando n=1
+      % Es una señal triangular de -1 a 1. La frecuencia es Fcontrol, y tiene
+      % Fs/Fcontrol muestras por ciclo
+      %
+      % Esta señal es la que se usa para comparar con la señal senoidal que se quiere
+      % codificar.
+      v_tri = 2*abs(2*mod(Fcontrol*(q-1)/Fs, 1) - 1) - 1;
+
+      idcprmax=0;
+    endif
+
+    % Generamos también las señales moduladoras, que son las que se quieren
+    % obtener tras demodular las PWM. Como M puede variar durante la simulación
+    % hay que calcularlo muestra a muestra
+
+    mod_r= M*cos(wred*(n-1)/Fs);
+    mod_s= M*cos(wred*(n-1)/Fs-2*pi/3);
+    mod_t= M*cos(wred*(n-1)/Fs+2*pi/3);
+
+
+    % Las señales Spx y Snx (x=r,s,t) son las señales PWM de cada una de las fases.
+    % positiva y negativa.
+    %
+    % Se generan comparando las señales senoidales que se quieren generar,
+    % es decir, mod_x, con la triangular.
+    %
+
+    Spr = (mod_r > 0) .* (mod_r >= (v_tri(n) + 1) / 2);
+    Snr = (mod_r < 0) .* (mod_r <= (v_tri(n) - 1) / 2);
+
+    Sps = (mod_s > 0) .* (mod_s >= (v_tri(n) + 1) / 2);
+    Sns = (mod_s < 0) .* (mod_s <= (v_tri(n) - 1) / 2);
+
+    Spt = (mod_t > 0) .* (mod_t >= (v_tri(n) + 1) / 2);
+    Snt = (mod_t < 0) .* (mod_t <= (v_tri(n) - 1) / 2);
+
+
+    % Calculamos la forma de onda de las corrientes idcpx(n)e idcnx,
+    % que son las corriente en las ramas positivas y negativas de cada fase.
+    %
+    % La corriente total de cada fase x será la suma de ambas contribuciones
+    %
+    % idcx=idcpx+idcnx.
+    %
+
+    idcpr=Spr*Im*cos(wred*(n-1)/Fs +phi);
+    idcnr=Snr*Im*cos(wred*(n-1)/Fs +phi);
+    idcr=idcpr+idcnr;
+
+    idcps=Sps*Im*cos(wred*(n-1)/Fs +phi-2*pi/3);
+    idcns=Sns*Im*cos(wred*(n-1)/Fs +phi-2*pi/3);
+    idcs=idcps+idcns;
+
+    idcpt=Spt*Im*cos(wred*(n-1)/Fs +phi+2*pi/3);
+    idcnt=Snt*Im*cos(wred*(n-1)/Fs +phi+2*pi/3);
+    idct=idcpt+idcnt;
+
+    if (idcpr>idcprmax)
+      idcprmax=idcpr;
+    endif
+
+  endif
+
+  % Solo sumamos las positivas. Las negativas son iguales pero de sentido contrario
+  %
+
+  idc(n)=idcpr+idcps+idcpt+Iarcdc;
 
 
   if (inversor==0)
