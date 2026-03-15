@@ -2,11 +2,11 @@
 ##
 ##  Wavelet_Visor
 ##
-## Esta funciÛn representa los coeficientes wavelets suministrados en forma
+## Esta funci√≥n representa los coeficientes wavelets suministrados en forma
 ## de vector de entrada W, obtenidos mediante una transformada de M niveles
-## (M=1, 2, ...). Siendo la frecuencia de muestreo original de la seÒal Fs.
+## (M=1, 2, ...). Siendo la frecuencia de muestreo original de la se√±al Fs.
 ##
-## El visor muestra la representaciÛn de los coeficientes en gr·ficos independientes.
+## El visor muestra la representaci√≥n de los coeficientes en gr√°ficos independientes.
 ##
 ## Copyright (C) 2025 Zigor R&D AIE
 ##
@@ -14,22 +14,22 @@
 ##
 ## @end deftypefn
 ##
-## Author: Dr. Carlos Romero PÈrez
+## Author: Dr. Carlos Romero P√©rez
 ## Created: 2025-03-29
 
 function Wavelet_Visor (W, Fs, M)
 
   if (isnumeric(W)==false || isnumeric(Fs)==false || isnumeric(M)==false)
-    error ("Los par·metros de entrada deben ser numÈricos");
+    error ("Los par√°metros de entrada deben ser num√©ricos");
   endif
   M=floor(M);
 
   if (Fs<=0 || M<=0)
-    error ("La frecuencia de muestreo Fs y el n˙mero de niveles M deben ser positivos");
+    error ("La frecuencia de muestreo Fs y el n√∫mero de niveles M deben ser positivos");
   endif
 
   if (isvector(W)==false)
-    error("El par·metros de entrada W debe ser un vector de coeficientes Wavelets");
+    error("El par√°metros de entrada W debe ser un vector de coeficientes Wavelets");
   endif
 
   L=length(W);
@@ -53,7 +53,7 @@ function Wavelet_Visor (W, Fs, M)
 
   R(1,n)=W(offset+n);
 
-  % RepresentaciÛn
+  % Representaci√≥n
 
   figs = findall(0, 'Type', 'figure');
   max_fig = max(figs);

@@ -1,28 +1,29 @@
 ##
 ##  Sobretension_Wavelet_Estadisticas
 ##
-## Esta funci髇 efect鷄 un an醠isis estad韘tico de la detecci髇 de sobretensi髇
+## Esta funci贸n efect煤a un an谩lisis estad铆stico de la detecci贸n de sobretensi贸n
 ## de DC mediante Wavelets.
 ##
-## La funci髇 tiene como par醡etros de entrada una se馻l de entrada x(n), el
-## umbral de alerta, el umbral de fallo, el n鷐ero de muestras de duraci髇 en
+## La funci贸n tiene como par谩metros de entrada una se帽al de entrada x(n), el
+## umbral de alerta, el umbral de fallo, el n煤mero de muestras de duraci贸n en
 ## alerta para considerarlo fallo y el tipo de wavelet.
 ##
 ## El tipo de wavelet es un enumerado:
 ##
 ## 0: Db4
 ## 1: Db8
+## 2: Lagrange R=8
 ##
-## No importa cu醠 es el n鷐ero de niveles de Wavelet, porque siempre usamos
+## No importa cu谩l es el n煤mero de niveles de Wavelet, porque siempre usamos
 ## la wavelet de mayor banda de frecuencia.
 ##
-## La funci髇 realiza 100 casos de estudio, a馻diendo ruido blanco aditivo
-## Gaussiano a la se馻l de entrada con varianzas 0.01,0.05, 0.1, 0.5, 1.
+## La funci贸n realiza 100 casos de estudio, a帽adiendo ruido blanco aditivo
+## Gaussiano a la se帽al de entrada con varianzas 0.01,0.05, 0.1, 0.5, 1.
 ##
-## La funci髇 retorna una matriz EST [5 X 4] donde cada fila muestra
-## el valore medio del 韓dice de detecci髇 del fallo de sobretensi髇, el valore
-## del 韓dice m醲imo, el valor del 韓dice m韓imo, y el valor de la varianzas
-## en la detecci髇 del 韓dice para el nivel de varianza de ruido:
+## La funci贸n retorna una matriz EST [5 X 4] donde cada fila muestra
+## el valore medio del 铆ndice de detecci贸n del fallo de sobretensi贸n, el valore
+## del 铆ndice m谩ximo, el valor del 铆ndice m铆nimo, y el valor de la varianzas
+## en la detecci贸n del 铆ndice para el nivel de varianza de ruido:
 ##
 ## fila 1: 0.01
 ## fila 2: 0.05
@@ -46,7 +47,7 @@ function EST = Sobretension_Wavelet_Estadisticas (vin, alerta, fallo ,Nfallo, ti
   endif
 
   if (isnumeric(vin)==false)
-    error("vin debe ser num閞ico");
+    error("vin debe ser num茅rico");
   endif
 
   if (isscalar(alerta)==false || isscalar(Nfallo)==false || isscalar(fallo)==false || isscalar(tipo)==false)
@@ -54,7 +55,7 @@ function EST = Sobretension_Wavelet_Estadisticas (vin, alerta, fallo ,Nfallo, ti
   endif
 
  if (isnumeric(alerta)==false || isnumeric(Nfallo)==false || isnumeric(fallo)==false || isnumeric(tipo)==false )
-    error("alerta, fallo, Nfallo y tipo deben ser num閞icos");
+    error("alerta, fallo, Nfallo y tipo deben ser num茅ricos");
   endif
 
   if (alerta<=0 || fallo<=0 || Nfallo<=0 || tipo<0)
@@ -64,7 +65,7 @@ function EST = Sobretension_Wavelet_Estadisticas (vin, alerta, fallo ,Nfallo, ti
 
   Nfallo=floor(Nfallo/2);
   tipo=floor(tipo);
-  if (tipo>1)
+  if (tipo>2)
     tipo=0;
   endif
 
@@ -80,7 +81,7 @@ function EST = Sobretension_Wavelet_Estadisticas (vin, alerta, fallo ,Nfallo, ti
   l=1:L;
   modulador(l)=(-1).^l;
 
-  alerta=alerta*sqrt(2);    % Adecuani髇 de nivel al wavelet
+  alerta=alerta*sqrt(2);    % Adecuani贸n de nivel al wavelet
   fallo=fallo*sqrt(2);
 
   for veces=1:trials
@@ -94,17 +95,22 @@ function EST = Sobretension_Wavelet_Estadisticas (vin, alerta, fallo ,Nfallo, ti
 
       if (tipo==0)
         W=Wavelet_Db4(xmod,3);
+        ind=4;                    % Retraso inicial del filtro
       endif
 
       if (tipo==1)
         W=Wavelet_Db8(xmod,3);
+        ind=8;                    % Retraso inicial del filtro
       endif
 
-      % Detecci髇 de sobretensi髇 por Wavelet
+      if (tipo==2)
+        W=Bank_Lagrange(xmod,3,8);
+        ind=31;                   % Retraso inicial del filtro
+      endif
 
-      ind=8;    %El peor caso es Db8, con 8 muestras de retraso
+      % Detecci贸n de sobretensi贸n por Wavelet
       flag=0;
-      antiglitch=Nfallo; % N鷐ero de detecciones consecutivas para asegurar fallo
+      antiglitch=Nfallo; % N煤mero de detecciones consecutivas para asegurar fallo
       nfallos=0;
 
       while (flag==0)

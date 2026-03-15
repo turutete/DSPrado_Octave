@@ -1,22 +1,22 @@
 ##
 ##  Sobretension_Momentos_Estadisticas
 ##
-## Esta funci髇 efect鷄 un an醠isis estad韘tico de la detecci髇 de sobretensi髇
+## Esta funci贸n efect煤a un an谩lisis estad铆stico de la detecci贸n de sobretensi贸n
 ## de DC.
 ##
-## La funci髇 tiene como par醡etros de entrada una se馻l de entrada x(n), el
-## umbral de alerta, el umbral de fallo, el n鷐ero de muestras de duraci髇 en
-## alerta para considerarlo fallo y el n鷐ero de muestras de la ventana de
-## an醠isis
+## La funci贸n tiene como par谩metros de entrada una se帽al de entrada x(n), el
+## umbral de alerta, el umbral de fallo, el n煤mero de muestras de duraci贸n en
+## alerta para considerarlo fallo y el n煤mero de muestras de la ventana de
+## an谩lisis
 ##
-## La funci髇 realiza 100 casos de estudio, a馻diendo ruido blanco aditivo
-## Gaussiano a la se馻l de entrada con varianzas 0.01,0.05, 0.1, 0.5, 1.
+## La funci贸n realiza 100 casos de estudio, a帽adiendo ruido blanco aditivo
+## Gaussiano a la se帽al de entrada con varianzas 0.01,0.05, 0.1, 0.5, 1.
 ##
-## Para cada iteraci髇 la funci髇 indica:
+## Para cada iteraci贸n la funci贸n indica:
 ##
-## Iteraci髇
-## 韓dice de detecci髇 del fallo
-## valor de la curtosis en el momento de la detecci髇
+## Iteraci贸n
+## 铆ndice de detecci贸n del fallo
+## valor de la curtosis en el momento de la detecci贸n
 ## Varianza del ruido
 ##
 ## Copyright (C) 2026 Zigor R&D
@@ -35,7 +35,7 @@ function EST = Sobretension_Momentos_Estadisticas (vin, alerta, fallo ,Nfallo, N
   endif
 
   if (isnumeric(vin)==false)
-    error("vin debe ser num閞ico");
+    error("vin debe ser num茅rico");
   endif
 
   if (isscalar(alerta)==false || isscalar(N)==false || isscalar(Nfallo)==false || isscalar(fallo)==false )
@@ -43,7 +43,7 @@ function EST = Sobretension_Momentos_Estadisticas (vin, alerta, fallo ,Nfallo, N
   endif
 
  if (isnumeric(alerta)==false || isnumeric(N)==false || isnumeric(Nfallo)==false || isnumeric(fallo)==false )
-    error("alerta, fallo, Nfallo y N deben ser num閞icos");
+    error("alerta, fallo, Nfallo y N deben ser num茅ricos");
   endif
 
   if (alerta<=0 || fallo<=0 || N<=0 || Nfallo<=0)
@@ -82,11 +82,11 @@ function EST = Sobretension_Momentos_Estadisticas (vin, alerta, fallo ,Nfallo, N
       Mfall=RT_Momentos(xprefall,N);
 
 
-      % Detecci髇 de sobretensi髇 por M0
+      % Detecci贸n de sobretensi贸n por M0
 
       ind=2*N;    %Se inicia a partir de las N+2 primeras muestras
       flag=0;
-      antiglitch=Nfallo; % N鷐ero de detecciones consecutivas para asegurar fallo
+      antiglitch=Nfallo; % N煤mero de detecciones consecutivas para asegurar fallo
       nfallos=0;
       detector_asim=4;
       flag_alerta=0;
@@ -105,7 +105,7 @@ function EST = Sobretension_Momentos_Estadisticas (vin, alerta, fallo ,Nfallo, N
           endif
         endif
 
-        %Confirmaci髇 de fallo
+        %Confirmaci贸n de fallo
         if ((Mfall(3,ind)>detector_asim && Mfall(1,ind)>0)&& flag_fallo==1)
           flag=1;
         else

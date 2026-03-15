@@ -2,24 +2,24 @@
 ##
 ## Wavelet_Db8
 ##
-## Esta función retorna los coeficientes de la transformada wavelet de la señal
-## de entrada x(n) de N muestras, para un nivel de descomposición M (M=0, 1, 2, ..).
+## Esta funciÃ³n retorna los coeficientes de la transformada wavelet de la seÃ±al
+## de entrada x(n) de N muestras, para un nivel de descomposiciÃ³n M (M=0, 1, 2, ..).
 ##
 ## La wavelet utilizada es Daubechies 8.
 ##
-## La función retorna los coeficientes de la transformada en un único vector.
-## La longitud del vector de salida es idéntico al vector de entrada x(n),
-## pero su interpretación debe hacerse del siguiente modo.
+## La funciÃ³n retorna los coeficientes de la transformada en un Ãºnico vector.
+## La longitud del vector de salida es idÃ©ntico al vector de entrada x(n),
+## pero su interpretaciÃ³n debe hacerse del siguiente modo.
 ##
-## Si se efectuan M niveles de descomposición la transformada tiene M+1 coeficientes,
+## Si se efectuan M niveles de descomposiciÃ³n la transformada tiene M+1 coeficientes,
 ## c0, c1, ..., CM.
 ##
 ## Si M>0, el coeficiente CM lo componen N/2 muestras. CM-1 tiene N/4 muestras, en general
-## el coeficiente Cj, con j=0:M-1, tendrá N/2^(M-j)
+## el coeficiente Cj, con j=0:M-1, tendrÃ¡ N/2^(M-j)
 ##
 ## El vector de salida W=[CM CM-1 ...C2 C1 C0]
 ##
-## Author: Dr. Carlos Romero Pérez
+## Author: Dr. Carlos Romero PÃ©rez
 ## Created: 2025-03-29
 ## Copyright (C) 2025 Zigor R&D AIE
 ##
@@ -28,10 +28,10 @@
 
 function W = Wavelet_Db8 (x, M)
 
-  MAX_NIVELES=8;    % Máximo número de niveles de descomposición
+  MAX_NIVELES=8;    % MÃ¡ximo nÃºmero de niveles de descomposiciÃ³n
 
   if (isnumeric(x)==false || isnumeric(M)==false)
-    error("Los parámetros de entrada deben ser numéricos");
+    error("Los parÃ¡metros de entrada deben ser numÃ©ricos");
   endif
 
   if (isvector(x)==false)
@@ -49,7 +49,7 @@ function W = Wavelet_Db8 (x, M)
   endif
 
   if (M>MAX_NIVELES)
-    errormsg="El máximo número de niveles de descomposición es ";
+    errormsg="El mÃ¡ximo nÃºmero de niveles de descomposiciÃ³n es ";
     errormsg=cstrcat(errormsg,mat2str(MAX_NIVELES));
     error(errormsg);
   endif

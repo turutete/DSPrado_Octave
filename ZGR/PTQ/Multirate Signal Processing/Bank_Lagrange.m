@@ -2,33 +2,33 @@
 ##
 ## Bank_Lagrange
 ##
-## Esta función retorna las señales resultantes de utilizar la descomposición
-## de una señal de entrada x(n) de N muestras mediante un banco de filtros
-## miltitasa, siendo el filtro de análisis un filtro half band de Lagrange,
+## Esta funciÃ³n retorna las seÃ±ales resultantes de utilizar la descomposiciÃ³n
+## de una seÃ±al de entrada x(n) de N muestras mediante un banco de filtros
+## miltitasa, siendo el filtro de anÃ¡lisis un filtro half band de Lagrange,
 ## y el filtro HP su conjugado.
 ##
-## Los parámetros de entrada son:
+## Los parÃ¡metros de entrada son:
 ##
-## x: Es la señal de entrada x(n)
-## M: Es el nivel de descomposición
-## R: Es el número de coeficientes del filtro half band distintos de cero y
-##    diferentes entre sí, con excepción del coeficiente intermedio de valor
+## x: Es la seÃ±al de entrada x(n)
+## M: Es el nivel de descomposiciÃ³n
+## R: Es el nÃºmero de coeficientes del filtro half band distintos de cero y
+##    diferentes entre sÃ­, con excepciÃ³n del coeficiente intermedio de valor
 ##    1/2. El orden del filtro es 4*R-2
 ##
-## La función retorna las secuencias de salida de cada nivel de descomposición
-## en un único vector.
-## La longitud del vector de salida es idéntico al vector de entrada x(n),
-## pero su interpretación debe hacerse del siguiente modo.
+## La funciÃ³n retorna las secuencias de salida de cada nivel de descomposiciÃ³n
+## en un Ãºnico vector.
+## La longitud del vector de salida es idÃ©ntico al vector de entrada x(n),
+## pero su interpretaciÃ³n debe hacerse del siguiente modo.
 ##
-## Si se efectuan M niveles de descomposición la salida tiene M+1 señales,
+## Si se efectuan M niveles de descomposiciÃ³n la salida tiene M+1 seÃ±ales,
 ## c0, c1, ..., CM.
 ##
-## Si M>0, la señal CM la componen N/2 muestras. CM-1 tiene N/4 muestras, en general
-## la señal Cj, con j=0:M-1, tendrá N/2^(M-j)
+## Si M>0, la seÃ±al CM la componen N/2 muestras. CM-1 tiene N/4 muestras, en general
+## la seÃ±al Cj, con j=0:M-1, tendrÃ¡ N/2^(M-j)
 ##
 ## El vector de salida W=[CM CM-1 ...C2 C1 C0]
 ##
-## Author: Dr. Carlos Romero Pérez
+## Author: Dr. Carlos Romero PÃ©rez
 ## Created: 2025-04-01
 ## Copyright (C) 2025 Zigor R&D AIE
 ##
@@ -37,10 +37,10 @@
 
 function W = Bank_Lagrange (x, M, R)
 
-  MAX_NIVELES=8;    % Máximo número de niveles de descomposición
+  MAX_NIVELES=8;    % MÃ¡ximo nÃºmero de niveles de descomposiciÃ³n
 
   if (isnumeric(x)==false || isnumeric(M)==false || isnumeric(R)==false)
-    error("Los parámetros de entrada deben ser numéricos");
+    error("Los parÃ¡metros de entrada deben ser numÃ©ricos");
   endif
 
   if (isvector(x)==false)
@@ -59,7 +59,7 @@ function W = Bank_Lagrange (x, M, R)
   endif
 
   if (M>MAX_NIVELES)
-    errormsg="El máximo número de niveles de descomposición es ";
+    errormsg="El mÃ¡ximo nÃºmero de niveles de descomposiciÃ³n es ";
     errormsg=cstrcat(errormsg,mat2str(MAX_NIVELES));
     error(errormsg);
   endif
