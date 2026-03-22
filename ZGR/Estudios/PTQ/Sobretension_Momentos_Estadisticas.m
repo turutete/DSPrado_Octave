@@ -7,7 +7,9 @@
 ## La función tiene como parámetros de entrada una señal de entrada x(n), el
 ## umbral de alerta, el umbral de fallo, el número de muestras de duración en
 ## alerta para considerarlo fallo y el número de muestras de la ventana de
-## análisis
+## análisis.
+##
+## La ventana de análisis N>=4.
 ##
 ## La función realiza 100 casos de estudio, añadiendo ruido blanco aditivo
 ## Gaussiano a la señal de entrada con varianzas 0.01,0.05, 0.1, 0.5, 1.
@@ -53,8 +55,8 @@ function EST = Sobretension_Momentos_Estadisticas (vin, alerta, fallo ,Nfallo, N
   N=floor(N);
   Nfallo=floor(Nfallo);
 
-  if (N==0)
-    N=1;
+  if (N<4)
+    N=4;
   endif
 
   if (Nfallo==0)
@@ -82,31 +84,45 @@ function EST = Sobretension_Momentos_Estadisticas (vin, alerta, fallo ,Nfallo, N
       Mfall=RT_Momentos(xprefall,N);
 
 
-      % Detección de sobretensión por M0
+      % Detección de sobretensión por M3
 
-      ind=2*N;    %Se inicia a partir de las N+2 primeras muestras
+      ind=3*N;    %Se inicia a partir de las 3N primeras muestras
       flag=0;
       antiglitch=Nfallo; % Número de detecciones consecutivas para asegurar fallo
       nfallos=0;
       detector_asim=4;
       flag_alerta=0;
       flag_fallo=0;
+      alerta_confirm=0;
+      fallo_confirm=0;
 
 
       while (flag==0)
 
      %Seguimiento de alerta
-        if (Male(1,ind)>0&& flag_alerta==1)
-          nfallos=nfallos+1;
-        else
-          if (flag_alerta==1)
+
+        if (flag_alerta==1 && alerta_confirm<round(N/4))
+          if (Male(1,ind)>0 && Male(3,ind)>detector_asim)
+            nfallos=nfallos+1;
+            alerta_confirm=alerta_confirm+1;
+          else
             flag_alerta=0;
             nfallos=0;
+            alerta_confirm=0;
+          endif
+        endif
+        if (flag_alerta==1 && alerta_confirm==round(N/4))
+          if (Male(1,ind)>0 && flag_alerta==1)
+           nfallos=nfallos+1;
+          else
+           flag_alerta=0;
+           nfallos=0;
           endif
         endif
 
+
         %Confirmación de fallo
-        if ((Mfall(3,ind)>detector_asim && Mfall(1,ind)>0)&& flag_fallo==1)
+        if (Mfall(3,ind)>detector_asim && Mfall(1,ind)>0&& flag_fallo==1)
           flag=1;
         else
           if (flag_fallo==1)
@@ -115,13 +131,13 @@ function EST = Sobretension_Momentos_Estadisticas (vin, alerta, fallo ,Nfallo, N
         endif
 
       %Detector de disparo de alerta
-        if ((Male(3,ind)>detector_asim && Male(1,ind)>0)&& flag_alerta==0)
+        if (Male(3,ind)>detector_asim && Male(1,ind)>0 && flag_alerta==0)
           flag_alerta=1;
           nfallos=nfallos+1;
         endif
 
         %Detector de disparo de fallo
-        if ((Mfall(3,ind)>detector_asim && Mfall(1,ind)>0)&& flag_fallo==0)
+        if (Mfall(3,ind)>detector_asim && Mfall(1,ind)>0&& flag_fallo==0)
           flag_fallo=1;
         endif
 
@@ -155,5 +171,9 @@ function EST = Sobretension_Momentos_Estadisticas (vin, alerta, fallo ,Nfallo, N
     EST(fil,:)=[mean(v) max(v) min(v) var(v)];
   endfor
 
+  printf("Media \t Max\t \Min\t \Varianza\n");
+  for fil=1:5
+    printf("%0.2f\t %i\t %i\t %0.2f\n",EST(fil,1),EST(fil,2), EST(fil,3), EST(fil,4));
+  endfor
 
 endfunction

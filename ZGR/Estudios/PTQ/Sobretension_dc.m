@@ -21,7 +21,7 @@ pkg load signal;
 % Condiciones de la simulación
 Fs=2450;        % Frecuencia de muestreo
 Fred=50;        % Frecuencia de red
-N=1024;         % Número de muestras de la simulación
+N=8192;         % Número de muestras de la simulación
 Vdcnom=1500;    % Tensión nominal del bus de DC en v
 Rampa=10;       % Rampa de subida de tensión en %pu/s
 Duracion=0.02;  % Duración de la sobretensión
@@ -45,7 +45,7 @@ flag_run=1;
 
 while (flag_run==1)
   choice=menu("Escenarios","Súbita 1.15","Rampa 10pu","Oscilatorio",...
-  "Rampa 20ms y subita 1.3","Salir");
+  "Rampa 600ms y subita 1.3","Salir");
 
   figure(1);
 
@@ -102,14 +102,14 @@ while (flag_run==1)
       title("Sobretensión súbita a 1.05 pu durante 250ms + transitorio 10 V 150Hz 20ms");
 
     case {4}
-      % Escenario 4: Subida en rampa 10 %pu/s durante 20ms. Subida súbita a 1.3
-      % tras los 20ms
+      % Escenario 4: Subida en rampa 10 %pu/s durante 600ms. Subida súbita a 1.3
+      % tras los 600ms
       Vsobre=1.3;
       Vmaxover=0.15*Vdcnom;
       Vper=zeros(1,N);
       delta=(Rampa*Vdcnom)/(100*Fs);
       ind=Nper;
-      Nrampa=floor(0.02*Fs);
+      Nrampa=floor(0.6*Fs);
       while (ind<=(Nper+Nrampa))
         Vaux=Vper(ind-1)+delta;
         if (Vaux>=Vmaxover)

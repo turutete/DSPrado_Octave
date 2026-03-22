@@ -81,8 +81,7 @@ function EST = Sobretension_Wavelet_Estadisticas (vin, alerta, fallo ,Nfallo, ti
   l=1:L;
   modulador(l)=(-1).^l;
 
-  alerta=alerta*sqrt(2);    % Adecuanión de nivel al wavelet
-  fallo=fallo*sqrt(2);
+
 
   for veces=1:trials
       indnoise=floor((casos-1)/20)+1;
@@ -94,19 +93,27 @@ function EST = Sobretension_Wavelet_Estadisticas (vin, alerta, fallo ,Nfallo, ti
 
 
       if (tipo==0)
-        W=Wavelet_Db4(xmod,3);
+        W=Wavelet_Db4(xmod,1);
         ind=4;                    % Retraso inicial del filtro
+        corrector=sqrt(2);
+
       endif
 
       if (tipo==1)
-        W=Wavelet_Db8(xmod,3);
+        W=Wavelet_Db8(xmod,1);
         ind=8;                    % Retraso inicial del filtro
+        corrector=1.457648116;
       endif
 
       if (tipo==2)
-        W=Bank_Lagrange(xmod,3,8);
+        W=Bank_Lagrange(xmod,1,3);
         ind=31;                   % Retraso inicial del filtro
+        corrector=1;
       endif
+
+      % Adecuación de los niveles de alerta y fallo segun Wavelet
+      alertaaux=alerta*corrector;    % Adecuación de nivel al wavelet
+      falloaux=fallo*corrector;
 
       % Detección de sobretensión por Wavelet
       flag=0;
@@ -115,13 +122,13 @@ function EST = Sobretension_Wavelet_Estadisticas (vin, alerta, fallo ,Nfallo, ti
 
       while (flag==0)
 
-        if (W(ind)>alerta)
+        if (W(ind)>alertaaux)
           nfallos=nfallos+1;
         else
           nfallos=0;
         endif
 
-        if (W(ind)>fallo)
+        if (W(ind)>falloaux)
           flag=1;
         endif
 
@@ -151,6 +158,11 @@ function EST = Sobretension_Wavelet_Estadisticas (vin, alerta, fallo ,Nfallo, ti
   for fil=1:5
     v(q)=R((fil-1)*20+q,3);
     EST(fil,:)=[mean(v) max(v) min(v) var(v)];
+  endfor
+
+  printf("Media \t Max\t \Min\t \Varianza\n");
+  for fil=1:5
+    printf("%0.2f\t %i\t %i\t %0.2f\n",EST(fil,1),EST(fil,2), EST(fil,3), EST(fil,4));
   endfor
 
 
