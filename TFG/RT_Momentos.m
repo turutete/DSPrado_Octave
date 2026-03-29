@@ -24,13 +24,14 @@
 ##
 ##
 
-function M = RT_Momentos (x, N)
+function M = RT_Momentos (xin, N)
 
-  if (isnumeric(x)==false || isnumeric(N)==false)
+
+  if (isnumeric(xin)==false || isnumeric(N)==false)
     error("Los parámetros de entrada deben ser numéricos");
   endif
 
-  if (isvector(x)==false)
+  if (isvector(xin)==false)
     error("El parámetro x debe ser un vector");
   endif
 
@@ -39,7 +40,11 @@ function M = RT_Momentos (x, N)
   endif
 
   N=round(N);
-  L=length(x);
+  L=length(xin);
+
+   Knormal=max(abs(xin));
+   x=xin/Knormal;
+
 
   coef=ones(N,1)/N;
 
