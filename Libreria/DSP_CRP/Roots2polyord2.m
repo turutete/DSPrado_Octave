@@ -7,7 +7,7 @@
 ##    In case of being an even number of roots, one of the polynomial is an
 ##    order 1 real polynomial.
 ##
-##  Author: Dr. Carlos Romero Pérez
+##  Author: Dr. Carlos Romero PÃ©rez
 ##  Date:   26/12/2020
 ##  Status: Verified
 ## Copyright (C)

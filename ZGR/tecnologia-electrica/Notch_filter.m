@@ -3,7 +3,7 @@
 ##
 ## Prototipo: [B,A]=Notch_filter(F0,B,Fs)
 ##
-## Esta función calcula los coeficientes del filtro Notch centrado en la
+## Esta funciÃ³n calcula los coeficientes del filtro Notch centrado en la
 ## frecuencia F0, con ancho de banda B, muestreando a Fs.
 ##
 ## La salida [B,A] son los coeficientes del numerador (B) y del denominador (A)

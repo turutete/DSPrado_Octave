@@ -1,7 +1,7 @@
 ##
 ##  iirtobiquads.m
 ##
-##  Author: Dr.Carlos Romero Pérez
+##  Author: Dr.Carlos Romero PÃ©rez
 ##
 ##  [Nbiquad,Bvector,Avector]=iirtobiquads(B,A)
 ##

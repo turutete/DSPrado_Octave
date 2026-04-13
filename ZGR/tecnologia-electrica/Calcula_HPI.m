@@ -3,7 +3,7 @@
 ##
 ## Prototipo: Y = Calcula_HPI(Fs, F0, x1, x2, x3)
 ##
-##  x1(n), x2(n) y x3(n) son 3 seÒales que forman un sistema trif·sico.
+##  x1(n), x2(n) y x3(n) son 3 se√±ales que forman un sistema trif√°sico.
 ##
 ##  Fs es la frecuencia de muestreo, y F0 es la frecuencia fundamental.
 ##

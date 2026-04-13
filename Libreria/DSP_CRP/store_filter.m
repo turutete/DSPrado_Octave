@@ -2,7 +2,7 @@ function status = store_filter (file_name,Num,Den)
 ##
 ##  status=store_filter(filename, Num, Den)
 ##
-## Author: Dr. Carlos Romero Pérez
+## Author: Dr. Carlos Romero PÃ©rez
 ##
 ## Description
 ## ===========
@@ -78,7 +78,7 @@ endif
 if status==true 
   ## Definition of header for C/Cpp files
   uppername=toupper(file_name);
-  header=sprintf("/**\n*\t%s.h\n*\n*\t\\author Dr. Carlos Romero Pérez\n",file_name);
+  header=sprintf("/**\n*\t%s.h\n*\n*\t\\author Dr. Carlos Romero PÃ©rez\n",file_name);
   datefile=sprintf("*\t\\date %s \n",date());
   description=sprintf("*\t Description\n*\t==\n*\t Filter coefficients\n*\n*/\n");
   conditional=sprintf("#ifndef _%s_\n#define\t_%s_\n",uppername,uppername);

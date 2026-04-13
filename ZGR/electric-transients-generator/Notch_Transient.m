@@ -2,91 +2,91 @@
 ##
 ## Notch_Transient.m
 ##
-## Esta funciÛn modela un evento transitorio de Notch en una lÌnea trif·sica,
+## Esta funci√≥n modela un evento transitorio de Notch en una l√≠nea trif√°sica,
 ## de acuerdo con el modelo de IEEE 1159-1995.
 ##
-## Los par·matros de entrada a la funciÛn son:
+## Los par√°matros de entrada a la funci√≥n son:
 ##
-##  v_input: Es una matriz 3XN donde la fila 1 es la seÒal vr(n), la fila 2
-##            es vs(n) y la fila 3 es vt(n). Las seÒales tienen N muestras
+##  v_input: Es una matriz 3XN donde la fila 1 es la se√±al vr(n), la fila 2
+##            es vs(n) y la fila 3 es vt(n). Las se√±ales tienen N muestras
 ##
 ##  fsamplig: define la frecuencia de muestreo en Hz de la matriz de entrada.
 ##
-##  wire:   Es un vector 1X3 usado de m·scara, cuyos elementos valen 0 Û 1. 
+##  wire:   Es un vector 1X3 usado de m√°scara, cuyos elementos valen 0 √≥ 1. 
 ##          Si es 0 indica que el evento de notch no afecta a la fase R, S o T,
-##          seg˙n sea el 1∫, 2∫ o 3∫ elemento, respectivamente. Si es '1', sÌ
-##          le afecta. Por ejemplo, si vale [0 1 1], el evento afectar· a las
+##          seg√∫n sea el 1¬∫, 2¬∫ o 3¬∫ elemento, respectivamente. Si es '1', s√≠
+##          le afecta. Por ejemplo, si vale [0 1 1], el evento afectar√° a las
 ##          fase S y T, pero no a la R.
 ##  deep: Profundidad del notch en valor por unidad [0 1]
 ##
-##  period: Periodicidad en s de repeticiÛn del evento. Si vale 0 es un evento
+##  period: Periodicidad en s de repetici√≥n del evento. Si vale 0 es un evento
 ##          unico.
 ##
 ##  tinit: Instante temporal de inicio del evento. Si el valor es 'aleatorio'
-##          la posiciÛn del evento inicial es aleatorio. Si tiene pariodicidad,
-##          los siguientes eventos aparecer·n con la periodicidad introducida
+##          la posici√≥n del evento inicial es aleatorio. Si tiene pariodicidad,
+##          los siguientes eventos aparecer√°n con la periodicidad introducida
 ##
-##  La seÒal de salida v_out es una matriz 3XN, siendo las filas 1, 2, 3 las
-##  seÒales vr, vs, vt con la perturbaciÛn sag aÒadida en el instante temporal
+##  La se√±al de salida v_out es una matriz 3XN, siendo las filas 1, 2, 3 las
+##  se√±ales vr, vs, vt con la perturbaci√≥n sag a√±adida en el instante temporal
 ##  configurado.
 ##
-##  Si el instante temporal configurado est· fuera de la ventana mostrada en la
-##  seÒal de entrada, o no puede ser mostrada en su totalidad, la funciÛn 
-##  devuelve v_out acorde a la configuraciÛn, pero indica en la ventana de comando
+##  Si el instante temporal configurado est√° fuera de la ventana mostrada en la
+##  se√±al de entrada, o no puede ser mostrada en su totalidad, la funci√≥n 
+##  devuelve v_out acorde a la configuraci√≥n, pero indica en la ventana de comando
 ##  este hecho.
 ##  
-##  La funciÛn calcula la frecuencia fundamental de la seÒal trif·sica x, y 
-##  calcula los armÛnicos a partir de esta informaciÛn.
+##  La funci√≥n calcula la frecuencia fundamental de la se√±al trif√°sica x, y 
+##  calcula los arm√≥nicos a partir de esta informaci√≥n.
 ##  
 ## @deftypefn {} {@var{v_out} =} Notch_Transient(@var{v_input}, @var{fsampling}, @var{wire}, @var{deep}, @var{period}, @var{tinit})
 ##
 ## @seealso{https://zigorcorp.sharepoint.com/:b:/s/UTI/EfGBWx4vW-tOodR8OONEG8wBv_GYyC9JAnpmUFV0lev1Zg?e=nCvfr9}
-## Author: Dr. Carlos Romero PÈrez <cromero@@zigor.com>
+## Author: Dr. Carlos Romero P√©rez <cromero@@zigor.com>
 ## Created: 2024-10-10
 ## Copyright (C) 2024 ZGR R&D AIE
 ## @end deftypefn
 
 function v_out = Notch_Transient (v_input, fsampling, wire, deep, period, tinit)
   
-  % ValidaciÛn de entradas
+  % Validaci√≥n de entradas
   [filas,columnas]=size(v_input);
   
   if(filas!=3 || columnas<1)
-    error('La seÒal de entrada tiene que ser una matriz 3 X N, con N>=1');
+    error('La se√±al de entrada tiene que ser una matriz 3 X N, con N>=1');
   endif
   
   if(isnumeric(v_input)==false || isnumeric(fsampling)==false || isnumeric(wire)==false || isnumeric(deep)==false || isnumeric(period)==false)
-    error('Los par·metros de entrada a la funciÛn deben ser numÈricos');
+    error('Los par√°metros de entrada a la funci√≥n deben ser num√©ricos');
   endif
   
   if(fsampling<=0 || deep<0 || period<0)
-    error('Par·metros de entrada negativos');
+    error('Par√°metros de entrada negativos');
   endif
   
    if isnumeric(tinit)
      if tinit<0
-       error('El par·metro tinit debe ser positivo');
+       error('El par√°metro tinit debe ser positivo');
      endif
    endif
    
    if deep>1
-     error('La profundidad del notch como m·ximo debe ser 1');
+     error('La profundidad del notch como m√°ximo debe ser 1');
    endif
    
    if size(wire)!=[1,3]
-     error('El par·metro wire debe ser un vector 1X3');
+     error('El par√°metro wire debe ser un vector 1X3');
    else
      if ((wire(1)!=0 && wire(1)!=1)|| (wire(2)!=0 && wire(2)!=1) || (wire(3)!=0 && wire(3)!=1))
-       error('Los elementos del par·metro wire toman valores 0 Û 1');
+       error('Los elementos del par√°metro wire toman valores 0 √≥ 1');
      endif
    endif
    
 
-  % DetecciÛn de la amplitud de la seÒal trif·sica
+  % Detecci√≥n de la amplitud de la se√±al trif√°sica
   Xmax=max([max(v_input(1,:)) max(v_input(2,:)) max(v_input(3,:))]);
   
-  % SÌntesis de la perturbaciÛn
-  % C·lculo del primer instante de apariciÛn
+  % S√≠ntesis de la perturbaci√≥n
+  % C√°lculo del primer instante de aparici√≥n
   if tinit=='aleatorio'
     indini=floor(rand(1)*columnas);
   else

@@ -542,6 +542,8 @@ while (n<=N)
 
   idc(n)=idcpr+idcps+idcpt+Iarcdc;
 
+  % Esta corriente Idc(n)
+
 
   if (inversor==0)
 

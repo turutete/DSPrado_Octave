@@ -1,6 +1,6 @@
 function filt_data= zgr_lp_prueba1(xin)
 %
-% Filtro LP usado en TPS500 para filtrar la medida de tensión Vdc
+% Filtro LP usado en TPS500 para filtrar la medida de tensiÃ³n Vdc
 %
 L=length(xin);
   

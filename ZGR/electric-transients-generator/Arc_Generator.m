@@ -2,14 +2,14 @@
 ##
 ## Arc_Generator.m
 ##
-## Esta función genera las señales de tensión y corriente de arco eléctrico
+## Esta funciÃ³n genera las seÃ±ales de tensiÃ³n y corriente de arco elÃ©ctrico
 ## al aplicar una diferencia de potencial V entre dos conductores, separados una
 ## distancia, en un medio aislante.
 ##
 ## El tiempo que tarda en formarse el canal de descarga es tau.
 ##
-## Los parámetros característicos del medio aislante, que definen su
-## comportamiento estático Vt-It son Rc, alfa y beta, de acuerdo con el modelo
+## Los parÃ¡metros caracterÃ­sticos del medio aislante, que definen su
+## comportamiento estÃ¡tico Vt-It son Rc, alfa y beta, de acuerdo con el modelo
 ## propuesto por Jonathan Andrea, "The Electric Arc as a Circuit Component".
 ##
 ##
@@ -18,11 +18,11 @@
 ##
 ## V: Es el vector V(n), diferencia de potencial entre conductores [1 x N]
 ## Rc: Resistencia del arco en la fase de descarga luminiscente [1x1]
-## alfa: Coeficiente del modelo característico del medio [1x1]
-## beta: Coeficiente del modelo característico del medio [1x1]
-## tau: Tiempo de formación del canal de descarga [1x1]
+## alfa: Coeficiente del modelo caracterÃ­stico del medio [1x1]
+## beta: Coeficiente del modelo caracterÃ­stico del medio [1x1]
+## tau: Tiempo de formaciÃ³n del canal de descarga [1x1]
 ## Rl: Resistencia del circuito de descarga [1x1]
-## VIarc: Matriz 2 X N donde VIarc(1,:) es la tensión del arco Varc(n) y VIarc(2,:)
+## VIarc: Matriz 2 X N donde VIarc(1,:) es la tensiÃ³n del arco Varc(n) y VIarc(2,:)
 ##        es la corriente del arco Iarc.
 ##
 ## Author: Dr. Carlos Romero
@@ -32,15 +32,15 @@
 
 function VIarc = Arc_Generator (V,Rc,alfa,beta,tau,Rl,Fs)
 
-  % Parámetros
-  Itmax=100;      % Corriente máxima curva [A]
+  % ParÃ¡metros
+  Itmax=100;      % Corriente mÃ¡xima curva [A]
   Fs=12500;       % Frecuencia de muestreo [Hz]
-  deltaI=0.1;     % Precisión de amplitud en corriente [A]
+  deltaI=0.1;     % PrecisiÃ³n de amplitud en corriente [A]
 
 
-  % Validación de parámetros de entrada
+  % ValidaciÃ³n de parÃ¡metros de entrada
   if(isnumeric(V)==false || isnumeric(Rc)==false || isnumeric(alfa)==false || isnumeric(beta)==false || isnumeric(tau)==false || isnumeric(Rl)==false || isnumeric(Fs)==false)
-   error("Los parámetros de entrada deben ser numéricos");
+   error("Los parÃ¡metros de entrada deben ser numÃ©ricos");
   endif
 
   if(isvector(V)==false || isscalar(V)==true)
@@ -48,11 +48,11 @@ function VIarc = Arc_Generator (V,Rc,alfa,beta,tau,Rl,Fs)
   endif
 
   if(isscalar(Rc)==false||isscalar(alfa)==false||isscalar(beta)==false||isscalar(tau)==false||isscalar(Rl)==false||isscalar(Fs)==false)
-    error("Todos los parámetros, excepto V, deben ser escalares");
+    error("Todos los parÃ¡metros, excepto V, deben ser escalares");
   endif
 
   if(Rl<=0 || alfa<0 || beta<0 || tau<0 || Fs<=0)
-    error("Los parámetros de entrada escalares deben ser mayor que cero");
+    error("Los parÃ¡metros de entrada escalares deben ser mayor que cero");
   endif
 
 
@@ -70,7 +70,7 @@ function VIarc = Arc_Generator (V,Rc,alfa,beta,tau,Rl,Fs)
    Vt=(alfa*Rc.*It)./(atan(beta.*It)*Rc.*It+alfa);
 
 
-   % Cálculo de puntos de trabajo posibles
+   % CÃ¡lculo de puntos de trabajo posibles
    for n=1: N
      % Recta de Carga
      Vcarga=V(n)-Rl*It;
@@ -88,14 +88,14 @@ function VIarc = Arc_Generator (V,Rc,alfa,beta,tau,Rl,Fs)
      if(n>1)
       [fil,col]=size(cortes);
 
-      % Cálculo de potencias
+      % CÃ¡lculo de potencias
       clear DifP;
       for q=1:fil
         Vnew=cortes(q,2);
         Inew=(cortes(q,1)-NI-1)*deltaI;
         DifP(q)=abs((Vnew*Inew)-P1);
       endfor
-      % Selección del nuevo punto de trabajo
+      % SelecciÃ³n del nuevo punto de trabajo
       [difpmin,indmin]=min(DifP);
       Vtreal(n)=cortes(indmin,2);
       Itreal(n)=(cortes(indmin,1)-NI-1)*deltaI;

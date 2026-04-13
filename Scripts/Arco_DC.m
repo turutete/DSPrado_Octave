@@ -8,9 +8,9 @@
 # Simula, para unas condiciones ambientales de irradiancia Su, y temperatura T
 # y una referencia de potencia activa Pref por unidad, la forma de onda de
 # corriente Idc que mide el sensor de medida de corriente DC del equipo, antes
-# y despuÈs de producirse un evento de arco DC
+# y despu√©s de producirse un evento de arco DC
 #
-# Autor: Dr. Carlos Romero PÈrez
+# Autor: Dr. Carlos Romero P√©rez
 # Fecha: 15/02/2025
 #
 
@@ -19,45 +19,45 @@ addpath('../ZGR/electric-transients-generator');
 
 % Condiciones ambientales
 Su=0.5+0.5*rand(1);    % Irradiancia por unidad S/Sref [0.5 - 1]
-T=25+15*(1-rand(1));           % Temperatura en ∫C [25 - 40]
+T=25+15*(1-rand(1));           % Temperatura en ¬∫C [25 - 40]
 
 
 % Condiciones de trabajo
 Msampling=5;          % Hay Msampling puntos en cada ciclo de control
 fswitch=2500;
 Fs=Msampling*fswitch;
-Nciclos=1000;         % N˙mero de ciclos de control de la simulaciÛn
-L=Nciclos*Msampling;  % N˙mero de puntos de la simulaciÛn
+Nciclos=1000;         % N√∫mero de ciclos de control de la simulaci√≥n
+L=Nciclos*Msampling;  % N√∫mero de puntos de la simulaci√≥n
 
 
-% Condiciones elÈctricas
+% Condiciones el√©ctricas
 fred=50;                          % Frecuencia de red
-Vffrmasred=690;                   % TensiÛn RMS fase fase
-Vfnrmsred=Vffrmasred/sqrt(3);     % TensiÛn RMS de red fase neutro
+Vffrmasred=690;                   % Tensi√≥n RMS fase fase
+Vfnrmsred=Vffrmasred/sqrt(3);     % Tensi√≥n RMS de red fase neutro
 Snom=3.3e6;                       % Potencia nominal del equipo
 Pu=1;                             % Referencia de potencia activa demandada al equipo por unidad
 Lac=150e-6;                       % Inductancia del filtro LC
-M=1.3;                            % Õndice de modulaciÛn
+M=1.3;                            % √çndice de modulaci√≥n
 
-% Valor m·ximo de generaciÛn del inversor
+% Valor m√°ximo de generaci√≥n del inversor
 Iacmax=Snom/(3*Vfnrmsred);
 Vacmax=Vfnrmsred+2*pi*fred*Lac*Iacmax;
 
 Pac=Snom*Pu;                      % Potencia AC
-Iac=Pac/(3*Vfnrmsred);            % Corriente f·sica
-Vac=Vfnrmsred+2*pi*fred*Lac*Iac;  % TensiÛn AC rms f·sica que hay que generar
+Iac=Pac/(3*Vfnrmsred);            % Corriente f√°sica
+Vac=Vfnrmsred+2*pi*fred*Lac*Iac;  % Tensi√≥n AC rms f√°sica que hay que generar
 
 
-Vequipomx=Vacmax*2*sqrt(2)/M;     % TensiÛn m·xima del Bus del equipo
-Iequipomx=Snom/Vequipomx;         % Corriente m·xima  del bus del equipo
-Iprotect=Iequipomx*1.2;           % ProtecciÛn de corriente DC del equipo
+Vequipomx=Vacmax*2*sqrt(2)/M;     % Tensi√≥n m√°xima del Bus del equipo
+Iequipomx=Snom/Vequipomx;         % Corriente m√°xima  del bus del equipo
+Iprotect=Iequipomx*1.2;           % Protecci√≥n de corriente DC del equipo
 flag_protct=0;
 
-Vequipo=Vac*2*sqrt(2)/M;          % TensiÛn de bus real
+Vequipo=Vac*2*sqrt(2)/M;          % Tensi√≥n de bus real
 Iequipo=Pac/Vequipo;              % Corriente de bus demandada por la carga
 
 
-% Modelo de arco elÈctrico
+% Modelo de arco el√©ctrico
 %Rc_arco=2221;         % Ohms
 %alfa_arco=49.0874;    % V
 %beta_arco=1.4614;     % 1/A
@@ -71,7 +71,7 @@ beta_arco=tan(alfa_arco/Vd)/Id;
 
 
 
-% Modelo din·mico del arco elÈctrico
+% Modelo din√°mico del arco el√©ctrico
 tau_aval=100e-6;
 nest=tau_aval*Fs;
 tau=1/(Fs*(e^(2.3/nest)-1));
@@ -88,7 +88,7 @@ ejemplo=2;
 
 switch (ejemplo)
   case 1
-    % ArtÌculo
+    % Art√≠culo
     Np=1;
     Ns=60;
     Iscpanel=8.85;
@@ -105,8 +105,8 @@ switch (ejemplo)
     Ns=24;
     Iscpanel=9.69;    %A
     Vocpanel=47;      %V
-    alfa_isc=0.05;    %/∫C
-    beta_vosc=-0.29;  % %/∫C
+    alfa_isc=0.05;    %/¬∫C
+    beta_vosc=-0.29;  % %/¬∫C
     Vmpptpanel=38.7;
     Impptpanel=9.17;
     Npanels=round(Vequipomx/Vmpptpanel);
@@ -117,8 +117,8 @@ switch (ejemplo)
     Ns=20;
     Iscpanel=18.57;     %A
     Vocpanel=41.7;      %V
-    alfa_isc=0.046;    %/∫C
-    beta_vosc=-0.277;  % %/∫C
+    alfa_isc=0.046;    %/¬∫C
+    beta_vosc=-0.277;  % %/¬∫C
     Vmpptpanel=34.6;
     Impptpanel=17.49;
     Npanels=round(Vequipomx/Vmpptpanel);
@@ -126,20 +126,20 @@ switch (ejemplo)
 endswitch
 
 
-% C·lculo de puntos de trabajo
+% C√°lculo de puntos de trabajo
 dI=0.01;
 It=(-32768:32767).*dI;
 Vt=(alfa_arco*Rc_arco.*It)./(atan(beta_arco.*It).*It.*Rc_arco+alfa_arco);
 
-Vaval=max(Vt);  % TensiÛn aproximada de avalancha
+Vaval=max(Vt);  % Tensi√≥n aproximada de avalancha
 
-% SimulaciÛn din·mica arco-panel
+% Simulaci√≥n din√°mica arco-panel
 Iarc=0;
-indarco=round(rand(1)*L);   % Õndice cuando se produce el arco
+indarco=round(rand(1)*L);   % √çndice cuando se produce el arco
 start_arc=1;
 idc_aux=0;
 
-% CondiciÛn inicial del control de bus DC
+% Condici√≥n inicial del control de bus DC
 D=0.5;
 Vdcpanel=Vequipo/Npanels;
 
@@ -150,23 +150,23 @@ n=1;
 r=1;
 flag_sobrecarga=0;    % 0: I <=Imppt 1: I>Imppt
 
-% C·lculo del condensador del bus de continua
-dVdc=Vequipomx/10;   % 10% de la tensiÛn de bus
+% C√°lculo del condensador del bus de continua
+dVdc=Vequipomx/10;   % 10% de la tensi√≥n de bus
 Cdc=Iequipomx/(4*Fs*dVdc);
 Kdc=Iequipomx/(Cdc*Fs);
 
-Vdcrect=3*sqrt(2)/pi*Vffrmasred;       % TensiÛn de red rectificada del ejemplo
+Vdcrect=3*sqrt(2)/pi*Vffrmasred;       % Tensi√≥n de red rectificada del ejemplo
 
 while (n<=L)
 
   if (flag_protct==0)
     if (flag_sobrecarga== 0)
-      % C·lculo de la corriente de campo fotovoltaico seg˙n condiciones ambientales
+      % C√°lculo de la corriente de campo fotovoltaico seg√∫n condiciones ambientales
       Ipanel=Idc_Panel(Vdcpanel,Su,T,Iscpanel,Vocpanel,Vmpptpanel,Impptpanel,Ns,Np,alfa_isc,beta_vosc);
       I=Npanelp*Ipanel;
       v=Vdcpanel*Npanels;
     else
-      %Calculamos la caida de tensiÛn en los paneles debido a la sobrecorriente
+      %Calculamos la caida de tensi√≥n en los paneles debido a la sobrecorriente
       deltaV=(idc_aux-(Ipanel*Npanelp))/(Cdc*Fs*Npanels);
       Vdcpanel=Vdcpanel-deltaV;
       if (Vdcpanel<(Vdcrect/Npanels))
@@ -190,9 +190,9 @@ while (n<=L)
 
 
   if n>=indarco
-    % C·lculo de puntos de trabajo
+    % C√°lculo de puntos de trabajo
     Vt2=v-It.*Rl_arco;
-    % C·lculo r·pido puntos corte
+    % C√°lculo r√°pido puntos corte
     if (abs(v)<=abs(Vaval))
       index_corte=Puntos_Corte(Vt,Vt2);
       It_corte=(index_corte-32769).*dI;
@@ -206,7 +206,7 @@ while (n<=L)
 
     if start_arc==1
       % El primer punto, se escoge en zona de descarga luminiscente
-      % si uno de los puntos de corte est· en esta zona. Si no, se
+      % si uno de los puntos de corte est√° en esta zona. Si no, se
       % escoge el de mayor corriente en zona de avalancha
       start_arc=0;
       [Itn,indtn]=min(It_corte);
@@ -227,7 +227,7 @@ while (n<=L)
       Ptprev=Vtn*Itn;
     endif
 
-    % Filtrado din·mico del arco
+    % Filtrado din√°mico del arco
     Varc=Vtn*Nom-DenVz1*Den;
     DenVz1=Varc;
 
@@ -236,8 +236,8 @@ while (n<=L)
     DenIz1=Iarc;
 
   endif
-  % Valor de tensiÛn DC
-  % GeneraciÛn de la corriente de carga en nuevo ciclo de control
+  % Valor de tensi√≥n DC
+  % Generaci√≥n de la corriente de carga en nuevo ciclo de control
   if (r==1)
     c=1:3;
     idcp(c)=I*(c-1)/(Msampling*D);
@@ -251,13 +251,13 @@ while (n<=L)
 
   idc_aux=idcp(r)+Iarc;
 
-  % ProtecciÛn de corriente DC
+  % Protecci√≥n de corriente DC
   if (idc_aux>=Iprotect)
     flag_protct=1;
   endif
   % Si la corriente total es menor o igual a Isc el panel es capaz de suministrarlo
   % pero si es mayor, el condensador del bus de DC debe suministrarlas,
-  % lo que provoca que caiga la tensiÛn del bus
+  % lo que provoca que caiga la tensi√≥n del bus
   if (idc_aux>(Iscpanel*Npanelp))
     flag_sobrecarga=1;
   else

@@ -4,29 +4,29 @@ function W= DiscreteWT(h0,D,x)
 ##
 ##  Prototipo: W= DiscreteWT(h0,D,x)
 ##
-##  x: Señal de entrada
-##  h0: Coeficientes del filtro de transformación H(z)
-##  W: Transformada wavelet de la señal de entrada
-##  D: Número de dilataciones
+##  x: SeÃ±al de entrada
+##  h0: Coeficientes del filtro de transformaciÃ³n H(z)
+##  W: Transformada wavelet de la seÃ±al de entrada
+##  D: NÃºmero de dilataciones
 ##
-##  Descripción
+##  DescripciÃ³n
 ##
-##  Esta función calcula la DWT de la señal de entrada x(n), utilizando
-##  la función wavelet h(n) y D dilataciones.
+##  Esta funciÃ³n calcula la DWT de la seÃ±al de entrada x(n), utilizando
+##  la funciÃ³n wavelet h(n) y D dilataciones.
 ##
 ##  Para efectuar la DWT se utiliza el algoritmo piramidal de Mallat [1] 
 ##  
-##  El tamaño del vector de entrada debe ser (2^L). De no ser así
-##  la función utiliza únicamente los 2^L primeros valores del vector,
-##  descartando el resto. El tamaño máximo del vector de entrada se fija en
+##  El tamaÃ±o del vector de entrada debe ser (2^L). De no ser asÃ­
+##  la funciÃ³n utiliza Ãºnicamente los 2^L primeros valores del vector,
+##  descartando el resto. El tamaÃ±o mÃ¡ximo del vector de entrada se fija en
 ##  16384 (2^14), es decir Lmax=14.
 ##
-##  La resolución de la DWT se controla mediante el parámetro de dilataciones
+##  La resoluciÃ³n de la DWT se controla mediante el parÃ¡metro de dilataciones
 ##  D. En el caso de que D=0, W=x.
 ##
 ##  0<=D<=L.
 ##
-##  En el caso de que la entrada D>L (L=floor(log2(length(x)))), la función
+##  En el caso de que la entrada D>L (L=floor(log2(length(x)))), la funciÃ³n
 ##  satura el valor de D=L.
 ##
 ##  El vector de salida tiene la siguiente estructura:
@@ -40,25 +40,25 @@ function W= DiscreteWT(h0,D,x)
 ##
 ##  W=x  si D=0
 ##
-##  wi (i=1:D) son las DW de x(n), mientras que sD es la función de escalado.
-##  Son vectores de dimensión [1 2^D], pero muestreadas a diferentes frecuencias
-##  (Fsi=Fs/2^i), siendo Fs la frecuencia de muestro de la señal original x(n).
+##  wi (i=1:D) son las DW de x(n), mientras que sD es la funciÃ³n de escalado.
+##  Son vectores de dimensiÃ³n [1 2^D], pero muestreadas a diferentes frecuencias
+##  (Fsi=Fs/2^i), siendo Fs la frecuencia de muestro de la seÃ±al original x(n).
 
-##  Las señales wi y sD (i=2:D) tienen N/2^i muestras, situadas en los
-##  índices j=2^i*n (n=1:N/2^i) de los vectores wi (o sD). Aunque el resto
-##  de índices es cero, las señales wi no son interpoladas. Esos índices cero
-##  no son muestras de la señal.
+##  Las seÃ±ales wi y sD (i=2:D) tienen N/2^i muestras, situadas en los
+##  Ã­ndices j=2^i*n (n=1:N/2^i) de los vectores wi (o sD). Aunque el resto
+##  de Ã­ndices es cero, las seÃ±ales wi no son interpoladas. Esos Ã­ndices cero
+##  no son muestras de la seÃ±al.
 ##
-##  Para visualizar el vector de salida, utilizar la función ViewDWT.m de la
-##  librería.
+##  Para visualizar el vector de salida, utilizar la funciÃ³n ViewDWT.m de la
+##  librerÃ­a.
 ##
 ##  Para entender el significado del vector de salida, la DWT analiza la 
-##  correlación de la wavelet h0(n) en las siguientes bandas de frecuencia
+##  correlaciÃ³n de la wavelet h0(n) en las siguientes bandas de frecuencia
 ##  [0 Fs/2^(D+2)][ Fs/2^(D+2) Fs/2^(D+1)] ... [Fs/8 Fs/4][Fs/4 Fs/2]
 ##       sD                 wD                    w2          w1
 ##  
 ##  Las diferentes wavelets que se encuentran en la literatura tienen
-##  comportamientos distintos, que las convierten en más o menos útiles
+##  comportamientos distintos, que las convierten en mÃ¡s o menos Ãºtiles
 ##  para las aplicaciones en las que se utilicen.
 ##
 ## Referencias:
@@ -89,25 +89,25 @@ pkg load signal;
   
   %Control de los argumentos de entrada
   if nargin()!=3
-    error("Incorrecto número de parámetros de entrada. Teclea help DWT para más información");
+    error("Incorrecto nÃºmero de parÃ¡metros de entrada. Teclea help DWT para mÃ¡s informaciÃ³n");
   elseif (isvector(h0)==false || isvector(x)==false)
-    error("h(n) y x(n) deben ser vectores numéricos");
+    error("h(n) y x(n) deben ser vectores numÃ©ricos");
   elseif (isscalar(D)==false)
-    error("El parámetro de dilación D debe ser un escalar");
+    error("El parÃ¡metro de dilaciÃ³n D debe ser un escalar");
   elseif (isnumeric(h0)==false || isnumeric(x)==false || isnumeric(D)==false)
-    error("h(n), D y x(n) deben ser numéricos");
+    error("h(n), D y x(n) deben ser numÃ©ricos");
   endif
   
   L=floor(log2(length(x)));
   if L>14
-    L=14;                   % Tamaño máximo del vector de entrada
+    L=14;                   % TamaÃ±o mÃ¡ximo del vector de entrada
     disp("Longitud del vector de entrada mayor excede al permitido");
   endif
   N=2^L;                    % La longitud del vector de entradas es 2^L
   
   if D>L
-    D=L;                    % Máximo número de dilataciones
-    disp("Excesivo número de dilataciones.");
+    D=L;                    % MÃ¡ximo nÃºmero de dilataciones
+    disp("Excesivo nÃºmero de dilataciones.");
   endif
   
   n=1:N;
@@ -135,7 +135,7 @@ pkg load signal;
       y0aux=[];
       y1aux(n)=y1(2*n-1);
       y0aux(n)=y0(2*n-1);
-      W(dilation,2^dilation * n)=y1aux(n);  % Son señales a distinta frecuencia
+      W(dilation,2^dilation * n)=y1aux(n);  % Son seÃ±ales a distinta frecuencia
       dilation=dilation+1;  
     endwhile
     W(dilation,2^(dilation-1) * n)=y0aux(n);

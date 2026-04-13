@@ -1,17 +1,17 @@
 ##
 ##  Prototipo: W = OD(N)
 ##
-##  Esta función ejecuta la transformación de ordenación de diezmado
-##  del número entero N en el entero W de acuerdo al siguiente algoritmo:
+##  Esta funciÃ³n ejecuta la transformaciÃ³n de ordenaciÃ³n de diezmado
+##  del nÃºmero entero N en el entero W de acuerdo al siguiente algoritmo:
 ##          L-1
 ##  Sea N= Sum nk 2^k
 ##          k=0
 ##
-##  siendo nk=0 ó 1
+##  siendo nk=0 Ã³ 1
 ##
-##  Es decir, (nL-1, nL-2, ...,n1,n0) es la representación binaria de N
+##  Es decir, (nL-1, nL-2, ...,n1,n0) es la representaciÃ³n binaria de N
 ##
-##  W es también un entero
+##  W es tambiÃ©n un entero
 ##      L-1
 ##  W= Sum wk 2^k
 ##      k=0
@@ -40,9 +40,9 @@
 
 function W = OD(N)
   
-  % Control del parámetro de entrada
+  % Control del parÃ¡metro de entrada
   if (isscalar(N)==false || isnumeric(N)==false || N<0)
-    error("El parámetro de entrada N debe ser un entero positivo)");
+    error("El parÃ¡metro de entrada N debe ser un entero positivo)");
   endif
   
   Nbin=dec2bin(floor(N));

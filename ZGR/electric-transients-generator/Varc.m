@@ -2,20 +2,20 @@
 ##
 ##  Varc.m
 ##
-##  Author: Dr. Carlos Romero Pérez
+##  Author: Dr. Carlos Romero PÃ©rez
 ##  Date: 08/12/2024
 ##
-##  Esta función utiliza la ecuación característica V-I de arco eléctrico
+##  Esta funciÃ³n utiliza la ecuaciÃ³n caracterÃ­stica V-I de arco elÃ©ctrico
 ##  propuesto en The Electric Arc as a Circuit Component. Johnathan Andrea.
 ##
 ##  Vt=(alfa*Rc*It)/(atan(beta*It)*It*Rc+alfa)
 ##
-##  Los parámetros característicos del modelom alfa, Rc y beta están definidos
-##  al inicio del fichero. No son parámetros de llamada a la función.
+##  Los parÃ¡metros caracterÃ­sticos del modelom alfa, Rc y beta estÃ¡n definidos
+##  al inicio del fichero. No son parÃ¡metros de llamada a la funciÃ³n.
 ##  
-##  Para hacer otros ejemplos, hay que modificar estos parámetros
+##  Para hacer otros ejemplos, hay que modificar estos parÃ¡metros
 ##
-##  Vt: Tensión de arco
+##  Vt: TensiÃ³n de arco
 ##  It: Corriente de arco
 ##   
 ## @deftypefn {} {@var{Vt} =} Varc (@var{It})
@@ -26,7 +26,7 @@
 
 function Vt = Varc (It)
   
-  % Parámetros característicos del arco
+  % ParÃ¡metros caracterÃ­sticos del arco
   alfa=49.0874;
   beta=1.4614;
   Rc=2221;

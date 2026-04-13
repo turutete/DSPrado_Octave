@@ -1,7 +1,6 @@
-
-## RT_Momentos
+## -*- texinfo -*-
 ##
-## M = RT_Momentos (x, N)
+## RT_Momentos
 ##
 ## Esta función calcula los 4 momentos estadísticos de la señal de entrada x(n).
 ##
@@ -23,15 +22,22 @@
 ## del valor medio mu, y de la desviación (sqrt(sigma2)).
 ##
 ##
+## @deftypefn {} {@var{M} =} RT_Momentos (@var{x}, @var{N})
+##
+## @end deftypefn
+##
+## Author: Dr. Carlos Romero Pérez
+## Created: 2025-04-04
+## Copyright (C) 2025 Zigor R&D AIE
+##
 
-function M = RT_Momentos (xin, N)
+function M = RT_Momentos (x, N)
 
-
-  if (isnumeric(xin)==false || isnumeric(N)==false)
+  if (isnumeric(x)==false || isnumeric(N)==false)
     error("Los parámetros de entrada deben ser numéricos");
   endif
 
-  if (isvector(xin)==false)
+  if (isvector(x)==false)
     error("El parámetro x debe ser un vector");
   endif
 
@@ -40,11 +46,7 @@ function M = RT_Momentos (xin, N)
   endif
 
   N=round(N);
-  L=length(xin);
-
-   Knormal=max(abs(xin));
-   x=xin/Knormal;
-
+  L=length(x);
 
   coef=ones(N,1)/N;
 

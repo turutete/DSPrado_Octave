@@ -4,8 +4,8 @@
 ##
 ## @deftypefn {} {@var{dbreak} =} Arco_D_break (@var{vbreak}, @var{p},@var{A},@var{B},@var{gamma})
 ##
-## Esta funciÛn calcula la distancia de breakdown a la que se iniciarÌa
-## un arco elÈctrico en un medio gaseoso, habiendo una diferencia de potencial
+## Esta funci√≥n calcula la distancia de breakdown a la que se iniciar√≠a
+## un arco el√©ctrico en un medio gaseoso, habiendo una diferencia de potencial
 ## entre dos condutores de Vbreak.
 ##
 ## Se utiliza la ley de Paschen:
@@ -13,16 +13,16 @@
 ## Vbreak= (B*p*d)/(ln(A*p*d)-ln(ln(1+1/gamma)))
 ##
 ## siendo A, B, gamma constantes experimentales
-## caracterÌsticas del gas, p la presiÛn y d la distancia entre conductores.
+## caracter√≠sticas del gas, p la presi√≥n y d la distancia entre conductores.
 ##
-## Los par·metros de entrada de la funciÛn son:
+## Los par√°metros de entrada de la funci√≥n son:
 ##
 ## vbreak: Diferencia de potencial entre conductores, a la que se quiere calcular
 ##        la distancia de ruptura en [v]
-## p: presiÛn atmosfÈrico en [atm]
+## p: presi√≥n atmosf√©rico en [atm]
 ## A: coeficiente A de Pashen en [1/m 1/mT]
 ## B: coeficiente B de Pashen en [V/(m mT)]
-## gamma: coeficiente de ionizaciÛn secundario (Towsend)
+## gamma: coeficiente de ionizaci√≥n secundario (Towsend)
 ##
 ## Author: Dr. Carlos Romero
 ##
@@ -39,11 +39,11 @@ function dbreak = Arco_D_break (vbreak,p,A,B,gamma)
   MAX_ITERATIONS=1000;
 
   if (isscalar(vbreak)==false || isscalar(p)==false || isscalar(A)==false || isscalar(B)==false || isscalar(gamma)==false)
-    error("Los par·metros de entrada deben ser escalares");
+    error("Los par√°metros de entrada deben ser escalares");
   endif
 
   if (p<=0 || A<=0 || B<=0 || gamma<=0)
-    error("Los par·metros deben ser positivos");
+    error("Los par√°metros deben ser positivos");
   endif
 
   vbreak=abs(vbreak);
@@ -61,10 +61,10 @@ function dbreak = Arco_D_break (vbreak,p,A,B,gamma)
   while(flag_loop==0)
     D=log(A*pt*xn)-C;
     if(iscomplex(D)==true)
-      error("Resultado no es n˙mero real");
+      error("Resultado no es n√∫mero real");
     endif
     if(D==0)
-      error("DivisiÛn por cero");
+      error("Divisi√≥n por cero");
     endif
 
     f=(B*pt*xn/D)-vbreak;
@@ -90,8 +90,8 @@ function dbreak = Arco_D_break (vbreak,p,A,B,gamma)
 
   dbreak=xn;
 
-%  disp("N∫ Iteraciones="); disp(trials);
+%  disp("N¬∫ Iteraciones="); disp(trials);
 
-%  plot(err_vect);xlabel("IteraciÛn");ylabel("error")
+%  plot(err_vect);xlabel("Iteraci√≥n");ylabel("error")
 
 endfunction

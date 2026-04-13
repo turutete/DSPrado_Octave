@@ -4,7 +4,7 @@
 ##  B,A: Numerator and denominator vector, resectively, of the digital filter
 ##  MN,MD: Matrix of biquads numerators and denominators, respectively
 ## 
-## Author: Dr. Carlos Romero Pérez
+## Author: Dr. Carlos Romero PÃ©rez
 ## Created: 2020-12-24
 ##
 ## Description

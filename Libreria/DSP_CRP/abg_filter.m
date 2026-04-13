@@ -4,14 +4,14 @@
 ##
 ##  Sintaxis: yf = abg_filter (xin,fsampling, alfa, beta, gamma, xinit, vinit, ainit)
 ##
-##  xin=se馻l de entrada
+##  xin=se帽al de entrada
 ##  fsampling=frecuencia de muestro
-##  alfa= par醡etro alfa del filtro [0 1]
-##  beta= par醡etro beta del filtro [0 1]
-##  gamma= par醡etro gamma del filtro [0 1]
+##  alfa= par谩metro alfa del filtro [0 1]
+##  beta= par谩metro beta del filtro [0 1]
+##  gamma= par谩metro gamma del filtro [0 1]
 ##  xinit=valor estimado inicial de x
 ##  vinit= valor estimado inicial de la velocidad de cambio de x
-##  ainit= valor estimado inicial de la aceleraci髇 de cambio de x
+##  ainit= valor estimado inicial de la aceleraci贸n de cambio de x
 ##
 ## Copyright (C) 2024 Dr. Carlos Romero
 ## 
@@ -35,7 +35,7 @@ function yf = abg_filter (xin,fsampling, alfa, beta, gamma, xinit, vinit, ainit)
   
   % Validaciones
   if (nargin < 8 || nargin > 8)
-  print_usage ("El n鷐ero de argumentos de entrada es err髇eo");
+  print_usage ("El n煤mero de argumentos de entrada es err贸neo");
   endif
   
   if(isreal(xin) && isreal(fsampling) && isreal(xinit)&& isreal(vinit)&&isreal(ainit) && isreal(alfa) && isreal(beta)&& isreal(gamma))
@@ -46,15 +46,15 @@ function yf = abg_filter (xin,fsampling, alfa, beta, gamma, xinit, vinit, ainit)
         print_usage("Error. alfa, beta y gamma deben estar en el rango [0 1]");
       end
     else
-      print_usage("Error. Dimensi髇 de los par醡etros de entrada incorrectos");
+      print_usage("Error. Dimensi贸n de los par谩metros de entrada incorrectos");
     end
   else
-    print_usage("Error. Los par醡etros de entrada deben ser eales");
+    print_usage("Error. Los par谩metros de entrada deben ser eales");
   end
   
   % Algoritmo
   
-  %Inicializaci髇
+  %Inicializaci贸n
   N=length(xin);
   xn1_n1=xinit;
   vn1_n1=vinit;
@@ -67,12 +67,12 @@ function yf = abg_filter (xin,fsampling, alfa, beta, gamma, xinit, vinit, ainit)
   % Iteraciones
   
   for i=1:N
-    % Predicci髇 con la din醡ica del sistema
+    % Predicci贸n con la din谩mica del sistema
     xn_n1=xn1_n1+vn1_n1*dt+0.5*an1_n1*dt2;
     vn_n1=vn1_n1+an1_n1*dt;
     an_n1=an1_n1;
     
-    % Actualizaci髇 de estados
+    % Actualizaci贸n de estados
     xn_n=xn_n1+alfa*(xin(i)-xn_n1);
     vn_n=vn_n1+beta*(xin(i)-xn_n1)*fsampling;
     an_n=an_n1+gamma*(xin(i)-xn_n1)*2*fsampling^2;

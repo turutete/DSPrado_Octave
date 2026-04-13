@@ -2,7 +2,7 @@ function [B,A]=lptune_filter(Fp,Fs)
 ##
 ##  lptune_filter.m
 ##
-##  Author: Dr. Carlos Romero Pérez
+##  Author: Dr. Carlos Romero PÃ©rez
 ##
 ##  [B,A]=lptune_filter(Fp,Fs)
 ##

@@ -5,11 +5,11 @@
 ##
 ##  Mout=[Valfa Vbeta Vhomo]'
 ##
-##  Descripci髇
+##  Descripci贸n
 ## -------------
 ##
-##  Esta funci髇 realiza las transformaciones de Clarke de 3 se馻les
-##  de entrada, que se suponen formar un sistema trif醩ico.
+##  Esta funci贸n realiza las transformaciones de Clarke de 3 se帽ales
+##  de entrada, que se suponen formar un sistema trif谩sico.
 ##
 ##                                       |1         -1/2        -1/2        |
 ##  Mout=[Valfa Vbeta Vhomo]'=sqrt(2/3) *|0         sqrt(3)/2  -sqrt(3)/2   | * [Va Vb Vc]'
@@ -39,11 +39,11 @@ function retval = Clarke (xa,xb, xc)
   
   
   if(isvector(xa)==0 || isvector(xb)==0 || isvector(xc)==0)
-    error('Las entradas de la funci髇 no son vectores');
+    error('Las entradas de la funci贸n no son vectores');
   endif
   
   if(isnumeric(xa)==0 || isnumeric(xb)==0 || isnumeric(xc)==0)
-    error('Las entradas de la funci髇 no son num閞icas');
+    error('Las entradas de la funci贸n no son num茅ricas');
   endif
   
     L=min([length(xa) length(xb) length(xc)]);

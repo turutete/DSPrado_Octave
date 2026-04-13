@@ -4,9 +4,9 @@
 ##  Prototipo: P=Pol_Caracteristico_Leverrier(M)
 ##
 ##  M: Matriz cuadrada mxm
-##  P= Vector mx1 de coeficientes del polinomio caracterÌstico
+##  P= Vector mx1 de coeficientes del polinomio caracter√≠stico
 ##
-##  Esta funciÛn calcula los coeficientes mediante el mÈtodo de
+##  Esta funci√≥n calcula los coeficientes mediante el m√©todo de
 ##  Leverrier.
 ##
 ## Copyright (C) 2022 Carlos Romero
@@ -31,7 +31,7 @@ function P = Pol_Caracteristico_Leverrier (M)
   
   % Control de entrada
   if (isnumeric(M)==false)
-    error("El par·metro de entrada debe ser una matriz numÈrica");
+    error("El par√°metro de entrada debe ser una matriz num√©rica");
   endif
   
   [fil,col]=size(M);
@@ -39,7 +39,7 @@ function P = Pol_Caracteristico_Leverrier (M)
     error("La matriz debe ser cuadrada");
   endif
   
-  % C·lculo del vector de trazas
+  % C√°lculo del vector de trazas
   for (i=1:fil)
     S(i)=trace(M^i);
   endfor

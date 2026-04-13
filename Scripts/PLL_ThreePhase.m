@@ -3,22 +3,22 @@
 %
 % Autor: Dr. Carlos Romero
 %
-% DescripciÛn:
+% Descripci√≥n:
 % ------------
 %
 % Este script implementa, y permite simular, un PLL digital para
-% sistemas de generaciÛn trif·sico, en el que la seÒal de tensiÛn
-% trif·sica generada debe estar en fase con la seÒal de red.
+% sistemas de generaci√≥n trif√°sico, en el que la se√±al de tensi√≥n
+% trif√°sica generada debe estar en fase con la se√±al de red.
 %
-% El script est· basado en el documento [1].
+% El script est√° basado en el documento [1].
 %
-% BibliografÌa:
+% Bibliograf√≠a:
 %
 % [1] https://www.ti.com/lit/sprabt4
 %
 % Historial de cambios
 %
-% 12/03/2022: Primera versiÛn.    Dr. Carlos Romero
+% 12/03/2022: Primera versi√≥n.    Dr. Carlos Romero
 %
 % This program is free software: you can redistribute it and/or modify it
 % under the terms of the GNU General Public License as published by
@@ -34,17 +34,17 @@
 % along with this program.  If not, see
 % <https://www.gnu.org/licenses/>.
 
-% ExplicaciÛn TÈcnica
+% Explicaci√≥n T√©cnica
 % -------------------
 %
-% En [1] se explica cÛmo la seÒal vq(t), que es la componente en cuadratura
-% obtenida al efectuar las transformadas de Clarke y Park a la seÒal 
-% trif·sica Va(t), Vb(t) y Vc(t), es proporcional al error de fase
+% En [1] se explica c√≥mo la se√±al vq(t), que es la componente en cuadratura
+% obtenida al efectuar las transformadas de Clarke y Park a la se√±al 
+% trif√°sica Va(t), Vb(t) y Vc(t), es proporcional al error de fase
 %
 % Vq(t) = Vgrid*(teta_grid(t) - teata_pll(t)
 %
-% La seÒal Vq(t) es la funciÛn de error, que se quiere minimizar a 0.
-% Esta seÒal de error es la entrada a un PI en cascada con un VCO
+% La se√±al Vq(t) es la funci√≥n de error, que se quiere minimizar a 0.
+% Esta se√±al de error es la entrada a un PI en cascada con un VCO
 %
 % Vq(t)--->(Kp+Ki/s)-->(+)-->(1/s)----(sin())-->
 %                       ^           |-(cos())-->
@@ -84,16 +84,16 @@
 % 
 
 % Condiciones iniciales aleatorias
-phi_red=2*pi*randn();   % Desfase inicial de la seÒal de red es aleatorio
+phi_red=2*pi*randn();   % Desfase inicial de la se√±al de red es aleatorio
 phi_pll=2*pi*randn();   % Desfase inicial del pll aleatorio
-df_red=0.001*randn();   % Error de frecuencia seÒal red arbitario <=1mHz
+df_red=0.001*randn();   % Error de frecuencia se√±al red arbitario <=1mHz
 df_pll=0.005*randn();   % Error de frecuencia oscilador pll aleaorio <=5mHz
 
-% Condiciones de red no aleatorias, aunque podr·n serlo. Amplitud tras ADC
-Vred=1/1.2;   % Ajustamos para que el Vmax=1 es 20% de sobretensiÛn.
+% Condiciones de red no aleatorias, aunque podr√°n serlo. Amplitud tras ADC
+Vred=1/1.2;   % Ajustamos para que el Vmax=1 es 20% de sobretensi√≥n.
 fred_teo=50;  % Ejemplo a 50Hz de red
-fpll_teo=fred_teo;  % Se supone que el equipo est· configurado correctamente
+fpll_teo=fred_teo;  % Se supone que el equipo est√° configurado correctamente
 
-% DiseÒo del PLL
-Mp=1;         % M·ximo overshoot en %
+% Dise√±o del PLL
+Mp=1;         % M√°ximo overshoot en %
 

@@ -1,7 +1,6 @@
-
-## Wavelet_Db8
+## -*- texinfo -*-##
 ##
-## W = Wavelet_Db8 (x, M)
+## Wavelet_Db8
 ##
 ## Esta función retorna los coeficientes de la transformada wavelet de la señal
 ## de entrada x(n) de N muestras, para un nivel de descomposición M (M=0, 1, 2, ..).
@@ -20,11 +19,16 @@
 ##
 ## El vector de salida W=[CM CM-1 ...C2 C1 C0]
 ##
-
+## Author: Dr. Carlos Romero Pérez
+## Created: 2025-03-29
+## Copyright (C) 2025 Zigor R&D AIE
+##
+## @deftypefn {} {@var{W} =} Wavelet_Db4 (@var{x}, @var{M})
+## @end deftypefn
 
 function W = Wavelet_Db8 (x, M)
 
-  MAX_NIVELES=8;    % Máximo número de niveles de descomposición
+  MAX_NIVELES=10;    % Máximo número de niveles de descomposición
 
   if (isnumeric(x)==false || isnumeric(M)==false)
     error("Los parámetros de entrada deben ser numéricos");

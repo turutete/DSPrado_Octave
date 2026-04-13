@@ -1,7 +1,7 @@
 #
 # filters_design.m
 # 
-# Author: Dr. Carlos Romero Pérez
+# Author: Dr. Carlos Romero PÃ©rez
 #
 # Description
 # ===========

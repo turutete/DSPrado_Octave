@@ -2,7 +2,7 @@ function h = daubechies2_20 (n)
 ##
 ##  Prototipo: h=daubechies2_20(n)
 ##
-##  Esta función retorna los coeficientes de la función de escalado de n
+##  Esta funciÃ³n retorna los coeficientes de la funciÃ³n de escalado de n
 ##  coeficientes (n par)[1].
 ##
 ##  Referencias:
@@ -29,25 +29,25 @@ function h = daubechies2_20 (n)
 
   % Tolerancia a fallos en la interfaz de usuario
   if nargin()!=1
-    error("Error. La función necesita el parámetro n=número de coeficientes");
+    error("Error. La funciÃ³n necesita el parÃ¡metro n=nÃºmero de coeficientes");
   endif
   
   if (isscalar(n)==false)
-    error("Error. El parámetro número de coeficientes debe ser escalar");
+    error("Error. El parÃ¡metro nÃºmero de coeficientes debe ser escalar");
   endif
   
   if (isnumeric(n)==false)
-    error("Error. El parámetro número de coeficientes debe ser numérico");
+    error("Error. El parÃ¡metro nÃºmero de coeficientes debe ser numÃ©rico");
   endif
   
    
   if (n<=0 || n>20)
-    error("El número de coeficientes debe ser un entero par positivo [2 20]");
+    error("El nÃºmero de coeficientes debe ser un entero par positivo [2 20]");
   endif
   
   if (rem(n,2)!=0)
     n=n-1;
-    disp("El número de coeficientes debe ser par. Se ha modificado la entrada a n=");
+    disp("El nÃºmero de coeficientes debe ser par. Se ha modificado la entrada a n=");
     disp(n);
   endif
   

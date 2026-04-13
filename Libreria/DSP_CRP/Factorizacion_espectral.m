@@ -3,14 +3,14 @@
 ##
 ##  Prototipo: [h0;h1]=Factorizacion_espectral(t)
 ##
-##  Esta funciÛn realiza la factorizaciÛn espectral del filtro de banda media
-##  T(z), cuyos coeficientes  se pasan como par·metro de entrada t.
+##  Esta funci√≥n realiza la factorizaci√≥n espectral del filtro de banda media
+##  T(z), cuyos coeficientes  se pasan como par√°metro de entrada t.
 ##
-##  La funciÛn devuelve los coeficientes de los filtros H(z) y H(1/z), que son
+##  La funci√≥n devuelve los coeficientes de los filtros H(z) y H(1/z), que son
 ##  h0 (H(z)) y h1 (H(1/z)) respectivamente.
 ##
-##  h0 es de fase mÌnima, ya que todos  los ceros est·n dentro del cÌrculo
-##  unidad. h1 es de fase m·xima.
+##  h0 es de fase m√≠nima, ya que todos  los ceros est√°n dentro del c√≠rculo
+##  unidad. h1 es de fase m√°xima.
 ##
 ## Copyright (C) 2024 Dr. Carlos Romero
 ## 
@@ -27,13 +27,13 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see
 ## <https://www.gnu.org/licenses/>.
-## Author: Dr. Carlos Romero PÈrez
+## Author: Dr. Carlos Romero P√©rez
 ## Created: 2024-03-03
 
 function retval = Factorizacion_espectral (t)
 
 if ( isvector(t)==false || isnumeric(t)==false)
-  error('El par·metro de entrada t debe ser un vector de coeficientes de un filtro de banda media T(z)'); 
+  error('El par√°metro de entrada t debe ser un vector de coeficientes de un filtro de banda media T(z)'); 
 endif
 
 [fil,col]=size(t);
@@ -45,7 +45,7 @@ else
 endif
 
 if (rem(length(h),2)==0)
-  error('El n˙mero de coeficientes de los filtros de banda media debe ser impar');
+  error('El n√∫mero de coeficientes de los filtros de banda media debe ser impar');
 endif
 
 L=length(h);
@@ -57,7 +57,7 @@ error('El filtro introducido no es un banda media');
 endif
 
 
-# C·lculo de los ceros del polinomio
+# C√°lculo de los ceros del polinomio
 
 ceros=roots(h);
 
@@ -96,7 +96,7 @@ for z=1:P
   endif
 endfor
 
-# ConstrucciÛn de los coeficientes de los filtros H0(z) y H1(z)
+# Construcci√≥n de los coeficientes de los filtros H0(z) y H1(z)
 
 L=length(zh0);
 h0=[1 -zh0(1)];

@@ -2,79 +2,79 @@
 ##
 ## Sag_Transient.m
 ##
-## Esta funciÛn modela un evento transitorio sag en una lÌnea trif·sica.
+## Esta funci√≥n modela un evento transitorio sag en una l√≠nea trif√°sica.
 ## de acuerdo con el modelo de IEEE 1159-1995.
 ##
-## Los par·metros de entrada a la funciÛn son:
+## Los par√°metros de entrada a la funci√≥n son:
 ##
-##  - v_input: Es una matriz 3XN donde la fila 1 es la seÒal vr(n), la fila 2
-##            es vs(n) y la fila 3 es vt(n). Las seÒales tienen N muestras.
+##  - v_input: Es una matriz 3XN donde la fila 1 es la se√±al vr(n), la fila 2
+##            es vs(n) y la fila 3 es vt(n). Las se√±ales tienen N muestras.
 ##
 ##  - fsamplig: define la frecuencia de muestreo en Hz de la matriz de entrada.
 ##
-##  - deep: Esta par·metro define la profundidad del hueco, en valor por unidad [0.1 0.9].
-##        Si es un par·metro, el hueco se considera trif·sico. Si es un vector,
-##        debe ser de dimensiÛn 1X3, siendo cada coeficiente del vector la
+##  - deep: Esta par√°metro define la profundidad del hueco, en valor por unidad [0.1 0.9].
+##        Si es un par√°metro, el hueco se considera trif√°sico. Si es un vector,
+##        debe ser de dimensi√≥n 1X3, siendo cada coeficiente del vector la
 ##        profundidad del hueco en cada fase.
 ##
 ##  - tinit: Instante temporal de inicio del evento
 ##
 ##  - tend: Instante temporal de fin del evento
 ##
-##  La seÒal de salida v_out es una matriz 3XN, siendo las filas 1, 2, 3 las
-##  seÒales vr, vs, vt con la perturbaciÛn sag aÒadida en el instante temporal
+##  La se√±al de salida v_out es una matriz 3XN, siendo las filas 1, 2, 3 las
+##  se√±ales vr, vs, vt con la perturbaci√≥n sag a√±adida en el instante temporal
 ##  configurado.
 ##
-##  Si el instante temporal configurado est· fuera de la ventana mostrada en la
-##  seÒal de entrada, o no puede ser mostrada en su totalidad, la funciÛn 
-##  devuelve v_out acorde a la configuraciÛn, pero indica en la ventana de comando
+##  Si el instante temporal configurado est√° fuera de la ventana mostrada en la
+##  se√±al de entrada, o no puede ser mostrada en su totalidad, la funci√≥n 
+##  devuelve v_out acorde a la configuraci√≥n, pero indica en la ventana de comando
 ##  este hecho.
 ##  
 ## @deftypefn {} {@var{v_out} =} Sag_Transient (@var{v_input}, @var{fsampling}, @var{deep}, @var{tinit}, @var{tend})
 ##
 ## @seealso{https://zigorcorp.sharepoint.com/:b:/s/UTI/EfGBWx4vW-tOodR8OONEG8wBv_GYyC9JAnpmUFV0lev1Zg?e=nCvfr9}
-## Author: Dr. Carlos Romero PÈrez <cromero@@zigor.com>
+## Author: Dr. Carlos Romero P√©rez <cromero@@zigor.com>
 ## Created: 2024-10-06
 ## Copyright (C) 2024 ZGR R&D AIE
 ## @end deftypefn
 
 function v_out = Sag_Transient (v_input, fsampling, deep, tinit, tend)
   
-  % ValidaciÛn de entradas
+  % Validaci√≥n de entradas
   [filas,columnas]=size(v_input);
   
   if(filas!=3 || columnas<1)
-    error('La seÒal de entrada tiene que ser una matriz 3 X N, con N>=1');
+    error('La se√±al de entrada tiene que ser una matriz 3 X N, con N>=1');
   endif
   
   if(isnumeric(v_input)==false || isnumeric(fsampling)==false ||isnumeric(deep)==false||isnumeric(tinit)==false||isnumeric(tend)==false)
-    error('Los par·metros de entrada a la funciÛn deben ser numÈricos');
+    error('Los par√°metros de entrada a la funci√≥n deben ser num√©ricos');
   endif
   
   if(fsampling<=0 || tinit <0 || tend<=0)
-    error('Par·metros de entrada negativos');
+    error('Par√°metros de entrada negativos');
   endif
   
   if(tend<=tinit)
     error('tend debe ser mayor que tind');
   endif
   
-  % ValidaciÛn del par·metro deep
+  % Validaci√≥n del par√°metro deep
   [fildeep,coldeep]=size(deep);
   if fildeep>coldeep
-    error('El par·metro deep debe ser un vector 1X1 o 1X3');
+    error('El par√°metro deep debe ser un vector 1X1 o 1X3');
   endif
   
   if coldeep==1
     if(deep<0.1 || deep>0.9)
-      error('La profundidad est· acotada en el rango [0.1 0.9]');
+      error('La profundidad est√° acotada en el rango [0.1 0.9]');
     endif
   else
     if coldeep!=3
-      error('El par·metro deep debe ser un vector 1X1 o 1X3');
+      error('El par√°metro deep debe ser un vector 1X1 o 1X3');
     else
       if(deep(1)<0.1||deep(2)<0.1||deep(3)<0.1 || deep(1)>0.9 || deep(2)>0.9 || deep(3)>0.9)
-        error('La profundidad est· acotada en el rango [0.1 0.9]');
+        error('La profundidad est√° acotada en el rango [0.1 0.9]');
       endif
     endif
   endif 
@@ -83,7 +83,7 @@ function v_out = Sag_Transient (v_input, fsampling, deep, tinit, tend)
     deep=[deep deep deep];
   endif
   
-  % GeneraciÛn del sag
+  % Generaci√≥n del sag
   
   tultimo=columnas/fsampling;
   flag_evento=0;                % 0: El evento se puede representar entero
@@ -95,7 +95,7 @@ function v_out = Sag_Transient (v_input, fsampling, deep, tinit, tend)
     flag_evento=1;
   endif
   
-  %Calcula Ìndices de inicio y fin de evento
+  %Calcula √≠ndices de inicio y fin de evento
   if(flag_evento!=-1)
     indini=floor(tinit*fsampling);
     if indini==0

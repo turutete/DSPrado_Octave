@@ -34,16 +34,16 @@
 
 function R = Matriz_Covarianza (X)
   
-  % Comprobación de entradas
+  % ComprobaciÃ³n de entradas
   if(isnumeric(X)==false)
-    error("El parámetro de entrada no es numérico");
+    error("El parÃ¡metro de entrada no es numÃ©rico");
   endif
-  % X es una matriz N x L, siendo N el nº de variables aleatorias
-  % y L el número de muestras de cada vectores.
+  % X es una matriz N x L, siendo N el nÂº de variables aleatorias
+  % y L el nÃºmero de muestras de cada vectores.
 
   [N,L]=size(X);
   
-  % R es simétrica: Rij=Rji
+  % R es simÃ©trica: Rij=Rji
   for fil= 1:N
     for col=fil:N
       R(fil,col)=Covarianza(X(fil,:),X(col,:));

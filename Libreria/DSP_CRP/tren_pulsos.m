@@ -5,7 +5,7 @@
 ##  ftren: Frecuencia del tren de pulsos en Hz
 ##  dutty: Dutty cycle en %
 ##  fuestreo: Frecuencia de muestreo en Hz
-##  tmax: Duración de la señal en segundos
+##  tmax: DuraciÃ³n de la seÃ±al en segundos
 ##
 ## Author: Dr. Carlos Romero
 ## Created: 2020-05-03
@@ -18,18 +18,18 @@ function retval = tren_pulsos (ftren, dutty, fmuestreo, tmax)
   endif
   
   
-  nmax=tmax*fmuestreo;        % Número de muestras total del vector salida
-  nmc=fmuestreo/ftren;        %Número de muestras por ciclo
-  nmones=round(nmc*dutty/100);  % Número de muestras '1' por ciclo
+  nmax=tmax*fmuestreo;        % NÃºmero de muestras total del vector salida
+  nmc=fmuestreo/ftren;        %NÃºmero de muestras por ciclo
+  nmones=round(nmc*dutty/100);  % NÃºmero de muestras '1' por ciclo
   
-  %Cálculo del número de ciclos completos que caben en el vector salida
+  %CÃ¡lculo del nÃºmero de ciclos completos que caben en el vector salida
   ncc=floor(nmax/nmc);
-  %Cálculo de número de muestras del último vector
+  %CÃ¡lculo de nÃºmero de muestras del Ãºltimo vector
   nmuv=rem(nmax,nmc);
    
-   %Vector periódico
+   %Vector periÃ³dico
    vector_periodico=[ones(1,nmones) zeros(1,nmc-nmones)];
-   % Último vector
+   % Ãšltimo vector
    if nmuv<=nmones
      vector_ultimo=ones(1,nmuv);
    else

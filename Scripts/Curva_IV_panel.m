@@ -1,52 +1,52 @@
 #
 # Curva_IV_panel.m
 #
-# Autor: Dr. Carlos Romero Pérez
+# Autor: Dr. Carlos Romero PÃ©rez
 # Fecha: 01/02/2025
 #
 # Este script calcula y grafica la curva I-V de un panel solar. de acuerdo
-# con la ecuación
+# con la ecuaciÃ³n
 #
 # I=Iph-Is (e^((V+IRs)/(nK T/q))-1)-(V+IRs)/Rsh.
 #
-# Pero resolver esta ecuación por medio de Newton Rampsom no es
+# Pero resolver esta ecuaciÃ³n por medio de Newton Rampsom no es
 # posible porque la exponencial toma valor infinito.
 #
-# Para resolverlo, se reescribe la ecuación tomando ln()
+# Para resolverlo, se reescribe la ecuaciÃ³n tomando ln()
 #
 # Llamamos Vter=nKT/q
 #
 # Su: Irradiancia por unidad (Su=S/Sref). Sref=1000 W/m2
 # Il: Es la corriente generada fotovoltaica, que depende de la irradiancia por
 #     unidad Su
-# I0: Corriente de saturación inversa (depende de la temperatura)
+# I0: Corriente de saturaciÃ³n inversa (depende de la temperatura)
 # Rs: Resistencia en serie de la celda (depende del semiconductor)
-# Rsh: Resistencia de pérdida de la celda (depende del semiconductor)
+# Rsh: Resistencia de pÃ©rdida de la celda (depende del semiconductor)
 #
-# Los parámetros característicos se calculan a partir de los datos
-# característicos del panel (datasheet de panel):
+# Los parÃ¡metros caracterÃ­sticos se calculan a partir de los datos
+# caracterÃ­sticos del panel (datasheet de panel):
 #
-# Np: Número de celdas en paralelo
-# Ns: Número de celdas en serie
-# Voc: Tensión de circuito abierto del panel
+# Np: NÃºmero de celdas en paralelo
+# Ns: NÃºmero de celdas en serie
+# Voc: TensiÃ³n de circuito abierto del panel
 # Isc: Corriente de corto circuito del panel
-# alfa_isc: Coeficiente de Tª de la corriente de corto circuito
-# beta_vosc: Coeficiente de Tª de la tension de circuito abierto
+# alfa_isc: Coeficiente de TÂª de la corriente de corto circuito
+# beta_vosc: Coeficiente de TÂª de la tension de circuito abierto
 #
-# El script calcula y grafica la característica I-V de la celda.
+# El script calcula y grafica la caracterÃ­stica I-V de la celda.
 #
 #
 
 % Condiciones ambientales
 Su=1;           % Irradiancia por unidad S/Sref
-T=25;           % Temperatura en ºC
+T=25;           % Temperatura en ÂºC
 
 % Selector Panel
 ejemplo=3;
 
 switch (ejemplo)
   case 1
-    % Artículo
+    % ArtÃ­culo
     Np=1;
     Ns=60;
     Iscpanel=8.85;
@@ -59,31 +59,31 @@ switch (ejemplo)
     Ns=24;
     Iscpanel=9.69;    %A
     Vocpanel=47;      %V
-    alfa_isc=0.05;    %/ºC
-    beta_vosc=-0.29  % %/ºC
+    alfa_isc=0.05;    %/ÂºC
+    beta_vosc=-0.29  % %/ÂºC
   case 3
     % Ejemplo de panel solar DS new energy 600W monocristalino
     Np=6;
     Ns=20;
     Iscpanel=18.57;     %A
     Vocpanel=41.7;      %V
-    alfa_isc=0.046;    %/ºC
-    beta_vosc=-0.277;  % %/ºC
+    alfa_isc=0.046;    %/ÂºC
+    beta_vosc=-0.277;  % %/ÂºC
 endswitch
 
 
 
-# Valores típicos a 25ºC
+# Valores tÃ­picos a 25ÂºC
 Rs=0.01;
 n=1.3;          % Factor de idealidad de semiconductor
 K=1.38e-23;     % Constante de Boltzman J/K
 Tk=T+273.15;    % Tempertura ambiente en Kelvin
-Tref=25+273.15; % Temperatura de referencia en K (25ºC)
+Tref=25+273.15; % Temperatura de referencia en K (25ÂºC)
 a=K*Tk*n;
-q=1.6e-19;      % Carga del electrón en C
+q=1.6e-19;      % Carga del electrÃ³n en C
 Vter=a/q;
 Rsh=10000;
-Eg=1.12;        % eV Energía de la banda gap
+Eg=1.12;        % eV EnergÃ­a de la banda gap
 
 
 % Valores de celda
@@ -102,7 +102,7 @@ index=1;
 error_max=0.001;
 Npuntos=100;
 
-% Cálculo de Voc real (I=0)
+% CÃ¡lculo de Voc real (I=0)
 flag_loop=0;
 Vn=Vocpanel/Ns;
 itera=0;
@@ -124,7 +124,7 @@ endwhile
 Voc_real=Vn;
 
 
-% Curva característica de panelfotovoltaico
+% Curva caracterÃ­stica de panelfotovoltaico
 dV=Voc_real/Npuntos;
 
 for m=0:Npuntos

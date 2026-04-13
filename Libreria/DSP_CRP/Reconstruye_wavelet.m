@@ -2,22 +2,22 @@
 ## 
 ##  [h0,h1] = Reconstruye_wavelet(wm0, itera)
 ##
-##  wm0: Coeficientes h0 de  la funciÛn de escalado
-##  itera: N˙mero de iteraciones para construir la wavelet (>=0)
+##  wm0: Coeficientes h0 de  la funci√≥n de escalado
+##  itera: N√∫mero de iteraciones para construir la wavelet (>=0)
 ##  h0: Funcion de escalado reconstruida
 ##  h1: Wavelet reconstruida
 ##
 ##
-##  DescripciÛn
+##  Descripci√≥n
 ##  ------------
-##  Esta funciÛn calcula los coeficientes de los filtros LP (h0(z)) y
-##  HP (h1(z)) para calcular la DWT utilizando una estructura en ·rbol
-##  di·dica  (Octave filter bank) [1].
+##  Esta funci√≥n calcula los coeficientes de los filtros LP (h0(z)) y
+##  HP (h1(z)) para calcular la DWT utilizando una estructura en √°rbol
+##  di√°dica  (Octave filter bank) [1].
 ##  
-##  h0 y h1 son los coeficientes de la funciÛn de escalado y d la wavelet
+##  h0 y h1 son los coeficientes de la funci√≥n de escalado y d la wavelet
 ##  respectivamente.
 ##
-##  El orden de los filtros h0 y h1 resultante ser·:
+##  El orden de los filtros h0 y h1 resultante ser√°:
 ##
 ##  M=(2^itera+1)*N
 ##
@@ -47,7 +47,7 @@ function [h0,h1] = Reconstruye_wavelet(wm0, it)
 itera=(int8)(it);
 
 if(isnumeric(wm0)==false)
-  error("El vector wm0 no es numÈrico");
+  error("El vector wm0 no es num√©rico");
 endif
 
 if (itera<0)

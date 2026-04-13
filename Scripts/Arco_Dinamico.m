@@ -1,7 +1,7 @@
 #
 # Arco_Dinamico.m
 #
-# Estudio de respuesta din·mica de arco elÈctrico
+# Estudio de respuesta din√°mica de arco el√©ctrico
 #
 # Autor: Dr. Carlos Romero
 # Fecha: 22/12/2024
@@ -16,7 +16,7 @@ dI=0.01;
 It=(-2048:2047).*dI;
 Vt=(alfa*Rc.*It)./(atan(beta.*It).*It.*Rc+alfa);
 
-Vaval=max(Vt);  % TensiÛn aproximada de avalancha
+Vaval=max(Vt);  % Tensi√≥n aproximada de avalancha
 
 % Modelo de circuito de descarga
 Rl=10;
@@ -35,13 +35,13 @@ It_vector=[];
 
 for index=1:length(Vg_vector)
 
-  % C·lculo de puntos de trabajo
+  % C√°lculo de puntos de trabajo
   Vt2=Vg_vector(index)-It.*Rl;
 
-  % C·lculo r·pido puntos corte
+  % C√°lculo r√°pido puntos corte
   index_corte=Puntos_Corte(Vt,Vt2);
   if length(index_corte)==0
-    error("El modelo V-I est·tico tiene pocos puntos");
+    error("El modelo V-I est√°tico tiene pocos puntos");
   endif
 
   It_corte=(index_corte-2049).*dI;
@@ -49,7 +49,7 @@ for index=1:length(Vg_vector)
 
   if index==1
     % El primer punto, se escoge en zona de descarga luminiscente
-    % si uno de los puntos de corte est· en esta zona. Si no, se
+    % si uno de los puntos de corte est√° en esta zona. Si no, se
     % escoge el de mayor corriente en zona de avalancha
     if (length(Vt_corte)==3)
       [Itn,indtn]=min(It_corte);
@@ -78,7 +78,7 @@ for index=1:length(Vg_vector)
 
 endfor
 
-% Modelo din·mico del arco elÈctrico
+% Modelo din√°mico del arco el√©ctrico
 tau_aval=100e-6;
 nest=tau_aval*Fs;
 tau=1/(Fs*(e^(2.3/nest)-1));
@@ -92,7 +92,7 @@ Varc=filter(Nom,Den,Vt_vector);
 t=(1:length(Varc))/Fs;
 
 figure(1);plot(t,Varc);
-xlabel('t[s]');ylabel('Varc(t)');title('TensiÛn de arco');
+xlabel('t[s]');ylabel('Varc(t)');title('Tensi√≥n de arco');
 figure(2);plot(t,Iarc);
 xlabel('t[s]');ylabel('Iarc(t)');title('Corriente de arco');
 

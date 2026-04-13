@@ -5,11 +5,11 @@
 ##
 ##  Mout=[Vd Vq V0]'
 ##
-##  Descripción
+##  DescripciÃ³n
 ## -------------
 ##
-##  Esta función realiza las transformaciones de Clarke y después de Park
-##  de las muestras de las señales trifásicas Va(n), Vb(n), Vc(n).
+##  Esta funciÃ³n realiza las transformaciones de Clarke y despuÃ©s de Park
+##  de las muestras de las seÃ±ales trifÃ¡sicas Va(n), Vb(n), Vc(n).
 ##  
 ##  |Vd |   | costeta   sinteta 0 |      | 1  cos(2pi/3)  cos(4pi/3)| |Va|
 ##  |Vq | = | -sinteta  costeta 0 |* K1* | 0  sin(2pi/3)  sin(4pi/3)|*|Vb|

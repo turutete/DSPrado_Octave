@@ -3,19 +3,19 @@
 ##
 ## Prototipo: [alfai; betai; betaim1;betaim2;...;beta1]=DWT(h0,Nbands,x)
 ##
-## h0: Coeficientes de la funci髇 de escalado
-## Nbands: N鷐ero de bandas descompuestas
-## x: Se馻l de entrada
+## h0: Coeficientes de la funci贸n de escalado
+## Nbands: N煤mero de bandas descompuestas
+## x: Se帽al de entrada
 ##
-## Descripci髇
+## Descripci贸n
 ## -------------
 ##
-## Esta funci髇 calcula la DWT de la se馻l de entrada x(n)
-## utilizando la funci髇 de escalado definido por los coeficientes h0(n)
+## Esta funci贸n calcula la DWT de la se帽al de entrada x(n)
+## utilizando la funci贸n de escalado definido por los coeficientes h0(n)
 ## y wavelet h1(n)=(-1)^(N-1-n)*h0(N-1-n) [1]
 ##
-## El par醡etro Nbands define el n鷐ero de subbandas de frecuenca en las
-## que se analiza la se馻l.
+## El par谩metro Nbands define el n煤mero de subbandas de frecuenca en las
+## que se analiza la se帽al.
 ##
 ## Dado un valor de Nbands, el espectro en frecuencias se analiza en
 ## Nbands+1 bandas:
@@ -26,15 +26,15 @@
 ## ...
 ## WNbands=[Fs/4 F2/2]
 ##
-## La salida de la funci髇 es un vector de Nbands+1 se馻les
+## La salida de la funci贸n es un vector de Nbands+1 se帽ales
 ## [x0 x1 x2 ... xNbands]
 ##
-## Cada se馻l a una tasa de muestreo:
+## Cada se帽al a una tasa de muestreo:
 ## fsi=fs/2^(Nbands-i+1) (i=1 : Nbands)
 ## 
 ## y fs0=fs/2^Nbands
 ##
-## y n鷐ero de muestras
+## y n煤mero de muestras
 ## 
 ## Li=L/2^(Nbands-i+1) (i=1: Nbands)
 ##
@@ -62,29 +62,29 @@
 
 function retval = DWT (h0, Nbands,x)
   
-% Gesti髇 de fallos de datos de entrada
+% Gesti贸n de fallos de datos de entrada
 if(isnumeric(h0)==false || isvector(h0)==false)
-  error("El par醡etro h0 debe ser un vector de coeficientes");
+  error("El par谩metro h0 debe ser un vector de coeficientes");
 endif
 
 if(isnumeric(Nbands)==false || isscalar(Nbands)==false || Nbands<=0)
-  error("El par醡etro Nbands debe ser un entero positivo");
+  error("El par谩metro Nbands debe ser un entero positivo");
 endif
 
 if(isnumeric(x)==false || isvector(x)==false)
-  error("El par醡etro x debe ser un vector num閞ico");
+  error("El par谩metro x debe ser un vector num茅rico");
 endif
 
 itera=int8(floor(Nbands));
 
 
-% Generaci髇 de h1(n)
+% Generaci贸n de h1(n)
 N=length(h0);
 n=0:N-1;
 
 h1(n+1)=(-1).^(N-1-n)*h0(N-n);
 
-% Iteraci髇 de filtrados. Estructura Octave filter banks
+% Iteraci贸n de filtrados. Estructura Octave filter banks
 
 retval=[];
 veces=int8(1);

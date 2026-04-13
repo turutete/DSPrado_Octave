@@ -1,18 +1,18 @@
 ##
 ##  Prototipo: N = ODI(M)
 ##
-##  Esta función ejecuta la transformación de ordenación 
-##  de diezmado inversa del número entero M enel entero N de acuerdo
+##  Esta funciÃ³n ejecuta la transformaciÃ³n de ordenaciÃ³n 
+##  de diezmado inversa del nÃºmero entero M enel entero N de acuerdo
 ##  al siguiente algoritmo:
 ##          L-1
 ##  Sea M= Sum mk 2^k
 ##          k=0
 ##
-##  siendo mk=0 ó 1
+##  siendo mk=0 Ã³ 1
 ##
-##  Es decir, (mL-1, mL-2, ...,m1,m0) es la representación binaria de M
+##  Es decir, (mL-1, mL-2, ...,m1,m0) es la representaciÃ³n binaria de M
 ##
-##  N es también un entero. M=OperadorDiferencial(N)
+##  N es tambiÃ©n un entero. M=OperadorDiferencial(N)
 ##      L-1
 ##  N= Sum nk 2^k
 ##      k=0
@@ -43,9 +43,9 @@
 
 function N = ODI(M)
   
-  % Control del parámetro de entrada
+  % Control del parÃ¡metro de entrada
   if (isscalar(M)==false || isnumeric(M)==false || M<0)
-    error("El parámetro de entrada M debe ser un entero positivo)");
+    error("El parÃ¡metro de entrada M debe ser un entero positivo)");
   endif
   
   Mbin=dec2bin(floor(M));

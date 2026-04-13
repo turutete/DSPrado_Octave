@@ -28,16 +28,16 @@
 
 function C = Covarianza (x1, x2)
   
-  % Comprbación de entradas
+  % ComprbaciÃ³n de entradas
   if (isnumeric(x1)==false || isnumeric(x2)==false) 
-    error("Las enradas no son numéricas");
+    error("Las enradas no son numÃ©ricas");
    endif
    
    if (isvector(x1)==false || isvector(x2)==false)
      error("Las entradas deben ser vectores");
    endif
    
-   % Homogeneizamos a dimensión 1 X L
+   % Homogeneizamos a dimensiÃ³n 1 X L
    [fil1, col1]=size(x1);
    if (fil1>1)
      x1=x1';

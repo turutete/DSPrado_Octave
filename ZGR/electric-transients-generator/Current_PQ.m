@@ -2,33 +2,33 @@
 ##
 ##  Current_PQ.m
 ##
-##  Esta función genera la señal de corriente i(t) correspondiente
-##  a una línea eléctrica trifásica sometida a una tensión v(t) y por
+##  Esta funciÃ³n genera la seÃ±al de corriente i(t) correspondiente
+##  a una lÃ­nea elÃ©ctrica trifÃ¡sica sometida a una tensiÃ³n v(t) y por
 ##  la que se inyecta una potencia activa P y una reactiva Q.
 ##
-##  La generación de la señal se hace de forma aproximada, suponiendo
-##  que el armónico de mayor amplitud de la FFT de la señal de tensión
+##  La generaciÃ³n de la seÃ±al se hace de forma aproximada, suponiendo
+##  que el armÃ³nico de mayor amplitud de la FFT de la seÃ±al de tensiÃ³n
 ##  es la correspondiente a la frecuencia de red.
 ##
-## La componente espectral de la señal de corriente se obtiene como
+## La componente espectral de la seÃ±al de corriente se obtiene como
 ##
 ## I=conj(S)/abs(V)^2 *V
 ##
-## siendo V la componente espectral de la tensión y S=P+jQ.
+## siendo V la componente espectral de la tensiÃ³n y S=P+jQ.
 ##
-## La señal de salida se obtiene como la IFFT del espectro calculado.
+## La seÃ±al de salida se obtiene como la IFFT del espectro calculado.
 ##
-## Esta operación se realiza para las 3 fases.
+## Esta operaciÃ³n se realiza para las 3 fases.
 ##
-##  I: Es una matriz 3 X N, siendo N el número de muestras de la señal de tensión
+##  I: Es una matriz 3 X N, siendo N el nÃºmero de muestras de la seÃ±al de tensiÃ³n
 ##    La fila 1 es la corriente de fase Ir, la fila 2 Is y la fila 3 It
-##  V: Tensión trifásica Vr, Vs, Vt. Es una matriz 3 X N
-##  P: Valor de potencia activa, en W, inyectada en la línea.
-##  Q: Valor de potencia reactiva, en VA, inyectada en la línea
+##  V: TensiÃ³n trifÃ¡sica Vr, Vs, Vt. Es una matriz 3 X N
+##  P: Valor de potencia activa, en W, inyectada en la lÃ­nea.
+##  Q: Valor de potencia reactiva, en VA, inyectada en la lÃ­nea
 ##
 ## @deftypefn {} {@var{I} =} Current_PQ (@var{V}, @var{P}, @var{Q})
 ##
-## Author: Dr. Carlos Romero Pérez <cromero@@zigor.com>
+## Author: Dr. Carlos Romero PÃ©rez <cromero@@zigor.com>
 ## Created: 2024-11-01
 ## Copyright (C) 2024 ZGR R&D AIE
 ## @end deftypefn
@@ -37,11 +37,11 @@
 function I = Current_PQ (V,P,Q)
   
   if ( isnumeric(V)==false || isnumeric(P)==false || isnumeric(Q)==false)
-    error("Los parámetros de entrada deben ser numéricos");
+    error("Los parÃ¡metros de entrada deben ser numÃ©ricos");
   endif
   
   if( ismatrix(V)==false )
-    error("El parámetro V debe ser una matriz 3 X N");
+    error("El parÃ¡metro V debe ser una matriz 3 X N");
   endif
   
   if P<0
@@ -51,7 +51,7 @@ function I = Current_PQ (V,P,Q)
   [fila,N]=size(V);
   
   if fila!=3
-    error("El parámetro V debe ser una matriz 3 X N");
+    error("El parÃ¡metro V debe ser una matriz 3 X N");
   endif
  
   VR=fft(V(1,:)*2/N);
@@ -83,7 +83,7 @@ function I = Current_PQ (V,P,Q)
   IS=(Sconj/VSmax^2)*VS(inds);
   IT=(Sconj/VRmax^2)*VT(indt);
   
-  %Síntesis de señales de corriente
+  %SÃ­ntesis de seÃ±ales de corriente
   Ir=zeros(1,N);
   Is=zeros(1,N);
   It=zeros(1,N);

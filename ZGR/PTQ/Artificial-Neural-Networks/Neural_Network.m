@@ -2,9 +2,9 @@
 ##
 ## Neural_Network.m
 ##
-## Esta funciÛn procesa N seÒales de entrada mediante una red neuronal
+## Esta funci√≥n procesa N se√±ales de entrada mediante una red neuronal
 ## aribitraria, formada por L capas, cada una de ellas formadas por
-## Nl neuronas, m·s el nivel inicial l=0 que son las N0 seÒales de entrada
+## Nl neuronas, m√°s el nivel inicial l=0 que son las N0 se√±ales de entrada
 ##
 ## Los pesos y bias entre niveles de neuronas se introducen mediante las matrices Ml
 ## de la forma
@@ -12,25 +12,25 @@
 ##  Ml=[Pl Bl]
 ##
 ## siendo Pl la submatriz de pesos dedes en nivel l-1 al nivel l y Bl la matriz
-## de bias de las neuronas del nivel l, de dimensiÛn [NlX1].
+## de bias de las neuronas del nivel l, de dimensi√≥n [NlX1].
 ##
-## Cada matriz Pl ser· de dimensiÛn Nl X N(l-1), siendo Nl el n˙mero
-## de neuronas del nivel l y N(l-1) es el n∫ neuronas del nivel l-1.
+## Cada matriz Pl ser√° de dimensi√≥n Nl X N(l-1), siendo Nl el n√∫mero
+## de neuronas del nivel l y N(l-1) es el n¬∫ neuronas del nivel l-1.
 ##
-## Por ejemplo. Una red con 2 seÒales de entrada, 3 capas de neuronas intermedias
+## Por ejemplo. Una red con 2 se√±ales de entrada, 3 capas de neuronas intermedias
 ## de 4, 3 y 1 neuronas respectivamente, las dimensiones de las matrices de
-## pesos ser·n P1 [4 X 2] , P2 [3 X 4], P3 [1 X 3]
+## pesos ser√°n P1 [4 X 2] , P2 [3 X 4], P3 [1 X 3]
 ##
 ## Las matrices M1 [4 X 3], M2 [3 X 5] y M3 [1 X 4]
 ##
-## Los par·metros de entrada de la funciÛn es la matriz X [N0 X K], que son las N0
-## seÒales de entrada, de longitud K cada una de ellas, y las matrices  Ml de
+## Los par√°metros de entrada de la funci√≥n es la matriz X [N0 X K], que son las N0
+## se√±ales de entrada, de longitud K cada una de ellas, y las matrices  Ml de
 ## cada nivel M1, M2, ...ML.
 ##
-## Esta funciÛn devuelve la matriz R [NL X K], siendo cada fila f de la matriz
-## la salida de la neurona f de la ˙ltima capa, y resultado de la lÛgica.
+## Esta funci√≥n devuelve la matriz R [NL X K], siendo cada fila f de la matriz
+## la salida de la neurona f de la √∫ltima capa, y resultado de la l√≥gica.
 ##
-## Author: Dr. Carlos Romero PÈrez
+## Author: Dr. Carlos Romero P√©rez
 ## Created: 2025-04-08
 ## Copyright (C) 2025  Zigor R&D AIE
 ##
@@ -48,7 +48,7 @@ function R = Neural_Network (X,varargin)
     L=length(varargin);
     for ind=1:L
       if (isnumeric(varargin{ind})==false)
-        error("Las matrices de pesos deben ser numÈricas");
+        error("Las matrices de pesos deben ser num√©ricas");
       endif
       dimension(ind,:)=size(varargin{ind});
     endfor
@@ -57,18 +57,18 @@ function R = Neural_Network (X,varargin)
   endif
 
   if (isnumeric(X)==false)
-    error("El par·metro de entrada X debe ser numÈrico");
+    error("El par√°metro de entrada X debe ser num√©rico");
   endif
 
   if (ismatrix(X)==false)
-    error("El par·metro de entrada X debe ser una matriz");
+    error("El par√°metro de entrada X debe ser una matriz");
   endif
 
   [fil,col]=size(dimension);
 
   for ind=1:fil-1
     if (dimension(ind,1)!=(dimension(ind+1,2)-1))
-      error("La dimensiÛn de las matrices no es correcta");
+      error("La dimensi√≥n de las matrices no es correcta");
     endif
   endfor
 
@@ -84,7 +84,7 @@ function R = Neural_Network (X,varargin)
     P=Maux(1:fil,1:(col-1));
     B=Maux(:,col);
     R=[];
-    % Calcula las seÒales resultantes de la red del nivel l
+    % Calcula las se√±ales resultantes de la red del nivel l
     for k=1:K
       Xin=Xaux(:,k);
       Yaux=Neural_Trigger(Xin,P,B,trigger);

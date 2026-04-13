@@ -1,29 +1,29 @@
 ##
 ## Prototype: Y=Decimation2_tree(H,L,x)
 ##
-##  DescripciÛn
+##  Descripci√≥n
 ##
-##  Esta funciÛn descompone la seÒal de entrada x(n) en 2^L seÒales 
+##  Esta funci√≥n descompone la se√±al de entrada x(n) en 2^L se√±ales 
 ## Y=[y1(m) y2(m) ... yL(m)]'
-##  muestreadas a una tasa de muestreo 1/L respecto a la seÒal de entrada.
+##  muestreadas a una tasa de muestreo 1/L respecto a la se√±al de entrada.
 ##
-## Se utiliza una estructura en ·rbol de L niveles para efectuar la
-## descomposiciÛn y diezmado por 2 en cada nivel.
+## Se utiliza una estructura en √°rbol de L niveles para efectuar la
+## descomposici√≥n y diezmado por 2 en cada nivel.
 ##
 ## El filtro FIR H(z) de entrada debe ser un filtro LP que elimine
 ## frecuencias superiores a pi/2. Internamente, se genera un filtro
 ##  paso de alto Hhp(z)=H(-z).
 ##
-##  Esta funciÛn puede ser utilizada tambiÈn para DWT, si los coeficientes
-##  de H(z) corresponden a la funciÛn de escalado.
+##  Esta funci√≥n puede ser utilizada tambi√©n para DWT, si los coeficientes
+##  de H(z) corresponden a la funci√≥n de escalado.
 ##  
-##  Si el tamaÒo de la seÒal de entrada es Nx, la longitud de los vectores
-##  de salida yl(m) (l=1:L) ser· Ny=2^(floor(log2(Nx))).
+##  Si el tama√±o de la se√±al de entrada es Nx, la longitud de los vectores
+##  de salida yl(m) (l=1:L) ser√° Ny=2^(floor(log2(Nx))).
 ##
-##  Si la longitud de la seÒal de entrada es inferior a 2^L, la seÒal de
+##  Si la longitud de la se√±al de entrada es inferior a 2^L, la se√±al de
 ##  entrada se completa hasta esta longitud con ceros.
 ##
-## Copyright (C) 2022 Carlos Romero PÈrez
+## Copyright (C) 2022 Carlos Romero P√©rez
 ## 
 ## This program is free software: you can redistribute it and/or modify it
 ## under the terms of the GNU General Public License as published by
@@ -46,20 +46,20 @@ function Y = Decimation2_tree (h,L,x)
   
   pkg load signal;
   
-  % Control de par·metros de entrada
+  % Control de par√°metros de entrada
   if (isvector(h)==false || isnumeric(h)==false)
-    error("El par·metro de entrada H(z) debe ser un vector numÈrico");
+    error("El par√°metro de entrada H(z) debe ser un vector num√©rico");
   endif
   
   if (isnumeric(L)==false || isscalar(L)==false || L<=0)
-    error("El par·metro L debe ser un escalar positivo");
+    error("El par√°metro L debe ser un escalar positivo");
   endif
   
   if (isvector(x)==false || isnumeric(x)==false)
-    error("El par·metro x(n) debe ser un vector numÈrico");
+    error("El par√°metro x(n) debe ser un vector num√©rico");
   endif
   
-  % ComprobaciÛn de la longitud del vector de entrada
+  % Comprobaci√≥n de la longitud del vector de entrada
   Nx=length(x);
   
   if (Nx<2^L)
@@ -70,13 +70,13 @@ function Y = Decimation2_tree (h,L,x)
     xin(1:Nmax)=x(1:Nmax);
   endif
   
-  % GeneraciÛn filtro HP
+  % Generaci√≥n filtro HP
   for q=1:length(h)
     hhp(q)=(-1)^(q-1)*h(q);
   endfor
   
   
-  % IteraciÛn de diezmados
+  % Iteraci√≥n de diezmados
   itera=1;
   Y=xin;
   Nitera=length(xin);

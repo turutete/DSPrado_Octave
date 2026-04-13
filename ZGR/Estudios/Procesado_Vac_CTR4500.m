@@ -1,5 +1,5 @@
 %
-% Análisis del procesado tensiones AC en CTR4500 UL 
+% AnÃ¡lisis del procesado tensiones AC en CTR4500 UL 
 %
 % Autor: Dr. Carlos Romero
 % Fecha: 28/11/2024
@@ -102,7 +102,7 @@ fsampling_iec=49000;
 fsampling_control=fsampling/16;
 
 
-% Análisis de respuesta en frecuencia de los filtros IEC
+% AnÃ¡lisis de respuesta en frecuencia de los filtros IEC
 B250=[LP250b0, LP250b1,LP250b2];
 A250=[LP250a0, LP250a1,LP250a2];
 
@@ -121,7 +121,7 @@ A49K10=[LP49K10a0, LP49K10a1,LP49K10a2];
 B40=[HP40b0, HP40b1,HP40b2];
 A40=[HP40a0, HP40a1,HP40a2];
 
-% Análisis de respuesta en frecuencia de los filtros UL
+% AnÃ¡lisis de respuesta en frecuencia de los filtros UL
 fsampling=fsampling_ul;
 B300=[LP_F2_300_b0, LP_F2_300_b1, LP_F2_300_b2];
 A300=[LP_F2_300_a0, LP_F2_300_a1, LP_F2_300_a2];  
@@ -202,22 +202,22 @@ xlabel('f[Hz]');ylabel('BP70(f) dB');title('BP 70');
 
 figure(10);
 plot(W/pi*fsampling/2,GHP50+GLP70);
-xlabel('f[Hz]');ylabel('Nª muestras');title('Retraso grupo BP 50-70');
+xlabel('f[Hz]');ylabel('NÂª muestras');title('Retraso grupo BP 50-70');
 
 figure(11);
 plot(W/pi*fsampling/2,GLP300);
-xlabel('f[Hz]');ylabel('Nª muestras');title('Retraso grupo LP 300');
+xlabel('f[Hz]');ylabel('NÂª muestras');title('Retraso grupo LP 300');
 
 figure(12);
 plot(W/pi*fsampling/2,G48LP50);
-xlabel('f[Hz]');ylabel('Nª muestras');title('Retraso grupo LP 48KHz 50');
+xlabel('f[Hz]');ylabel('NÂª muestras');title('Retraso grupo LP 48KHz 50');
 
 figure(13);
 plot(W/pi*fsampling/2,G48LP10);
-xlabel('f[Hz]');ylabel('Nª muestras');title('Retraso grupo LP 48KHz 10');
+xlabel('f[Hz]');ylabel('NÂª muestras');title('Retraso grupo LP 48KHz 10');
 
 
-% Respuestas a Escalón DC o AC UL
+% Respuestas a EscalÃ³n DC o AC UL
 n=1:4096;
 xin(n)=sin(2*pi*(n-1)*60/fsampling);
 xindc=ones(1,4096);

@@ -5,35 +5,35 @@
 % 
 % Historial
 %
-% 20/10/2021: Primera edici髇
+% 20/10/2021: Primera edici贸n
 %
-% Descripci髇
+% Descripci贸n
 %
-% Estudio para dise駉 de filtro LP configurable para el proyecto STAMINA, bloque
+% Estudio para dise帽o de filtro LP configurable para el proyecto STAMINA, bloque
 % Noise Generator.
 %
-% La idea es dise馻r un filtro patr髇 Hp(z), IIR y utilizar la transformaci髇 de
+% La idea es dise帽ar un filtro patr贸n Hp(z), IIR y utilizar la transformaci贸n de
 % Contastinides para modificar la banda de paso del filtro.
 
 pkg load signal;
 
-% Especificaciones del filtro patr髇
+% Especificaciones del filtro patr贸n
 fp=1/8;
 Wp=1/64;
 Rp=0.001;
 Rs=91;
 
-% Orden del filtro patr髇 IIR el韕tico
+% Orden del filtro patr贸n IIR el铆ptico
 Npatron=ellipord(fp,fp+Wp,Rp,Rs);
 
-% Dise駉 filtro IIR el韕tico
+% Dise帽o filtro IIR el铆ptico
 [B1,A1]=ellip(Npatron,Rp,Rs,fp);
 [H1,W]=freqz(B1,A1,1024);
 figure(1);plot(W/pi,20*log10(abs(H1)));grid;xlabel('f/fNyquist');
-ylabel('|H1(f)| [dB]');title('Filtro LP patr髇');
+ylabel('|H1(f)| [dB]');title('Filtro LP patr贸n');
 
 
-% Obtenci髇 de Biquads
+% Obtenci贸n de Biquads
 K=B1(1);
 B1n=B1./K;
 Z1=roots(B1n);
@@ -68,7 +68,7 @@ HBT=K.*(HB1.*HB2.*HB3.*HB4.*HB5.*HB6.*HB7);
 figure(2);plot(W/pi,20*log10(abs(HBT)));grid;xlabel('f/FNyqyst');
 ylabel('|HT(f)| dB');title('Respuesta en frecuencia Biquads en Cascada');
 
-% Gesti髇 del escalado K1 para que las salidas de los biquad est閚 normalizados
+% Gesti贸n del escalado K1 para que las salidas de los biquad est茅n normalizados
 K1=1/abs(HB1(63));
 K2=1/abs(HB2(63));
 K3=1/abs(HB3(63));
@@ -78,7 +78,7 @@ K6=1/abs(HB6(63));
 K7=K/(K1*K2*K3*K4*K5*K6);
 %K1=K;
 
-% Cuantizaci髇 coeficientes Q2.30
+% Cuantizaci贸n coeficientes Q2.30
 Nq1=round(N1*K1*2^30);
 Dq1=round(D1*2^30);
 Nq2=round(N2*K2*2^30);
@@ -124,21 +124,21 @@ HQBT=HQB1.*HQB2.*HQB3.*HQB4.*HQB5.*HQB6.*HQB7;
 figure(3);plot(W/pi,20*log10(abs(HQBT)));grid;xlabel('f/FNyqyst');
 ylabel('|HQT(f)| dB');title('Respuesta en frecuencia Biquads Cuantizados en Cascada');
 
-% Error Cuantizaci髇
+% Error Cuantizaci贸n
 figure(4);plot(W/pi,20*log10(abs(HQBT-H1)));grid;xlabel('f/FNyqyst');
-ylabel('|HQT(f)-H1(f)| dB');title('Error de cuantizaci髇 Q2.30');
+ylabel('|HQT(f)-H1(f)| dB');title('Error de cuantizaci贸n Q2.30');
 
 % Muestra en pantalla los coeficientes Q2.30
 %Kq1
 %[Nq1 Dq1;Nq2 Dq2;Nq3 Dq3;Nq4 Dq4;Nq5 Dq5;Nq6 Dq6;Nq7 Dq7]
 
 
-% Prueba de transformaci髇 LP a LP
+% Prueba de transformaci贸n LP a LP
 Fsampling=200e6;
 W=50e6;
 
-FC=W/2;             % Frecuencia de paso anal骻ico filtro transformado
-F0=Fsampling*fp/2;  % Frecuencia de paso anal骻ica filtro patr髇
+FC=W/2;             % Frecuencia de paso anal贸gico filtro transformado
+F0=Fsampling*fp/2;  % Frecuencia de paso anal贸gica filtro patr贸n
 
 alfa=sin((F0-FC)/(2*Fsampling))/sin((F0+FC)/(2*Fsampling));
 
@@ -173,7 +173,7 @@ figure(5);plot(W/pi,20*log10(abs(HT)));grid;xlabel('f/FNyqyst');
 ylabel('|HT(f)| dB');title('Filtro Transformado');
 
 
-% Prueba de filtrado de se馻les
+% Prueba de filtrado de se帽ales
 l=1:1024;
 f1=1/4-1/16;
 
@@ -203,13 +203,13 @@ yf7=filter(BT7,AT7,yf6);
 [YF,W]=freqz(yf7/512,1,1024);
 
 figure(6);plot(W/pi,20*log10(abs(X)));grid;xlabel('f/Nyquist');
-ylabel('|X(f)| dB');title('Se馻l de test');
+ylabel('|X(f)| dB');title('Se帽al de test');
 
 figure(7);plot(W/pi,20*log10(abs(XF)));grid;xlabel('f/Nyquist');
-ylabel('|XF(f)| dB');title('Se馻l Filtrado Patr髇');
+ylabel('|XF(f)| dB');title('Se帽al Filtrado Patr贸n');
 
 figure(8);plot(W/pi,20*log10(abs(YF)));grid;xlabel('f/Nyquist');
-ylabel('|X(f)| dB');title('Se馻l Filtrado Transformado');
+ylabel('|X(f)| dB');title('Se帽al Filtrado Transformado');
 
 figure(9);plot(l-1,xf1);grid;xlabel('n');
 ylabel('xf1');title('Salida filtro 1');

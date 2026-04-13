@@ -2,62 +2,62 @@
 ##
 ## Harmonics_Transient.m
 ##
-## Esta función modela un evento transitorio de armónicos en una línea trifásica,
+## Esta funciÃ³n modela un evento transitorio de armÃ³nicos en una lÃ­nea trifÃ¡sica,
 ## de acuerdo con el modelo de IEEE 1159-1995.
 ##
-## Los parámatros de entrada a la función son:
+## Los parÃ¡matros de entrada a la funciÃ³n son:
 ##
-##  v_input: Es una matriz 3XN donde la fila 1 es la señal vr(n), la fila 2
-##            es vs(n) y la fila 3 es vt(n). Las señales tienen N muestras
+##  v_input: Es una matriz 3XN donde la fila 1 es la seÃ±al vr(n), la fila 2
+##            es vs(n) y la fila 3 es vt(n). Las seÃ±ales tienen N muestras
 ##
 ##  fsamplig: define la frecuencia de muestreo en Hz de la matriz de entrada.
 ##
-##  Harm: Esta parámetro es un vector fila cuyos elementos representa la amplitud 
-##        por unidad del armónico fh(k)= fn*(k+1). Se pueden añadir tantos armónicos como
+##  Harm: Esta parÃ¡metro es un vector fila cuyos elementos representa la amplitud 
+##        por unidad del armÃ³nico fh(k)= fn*(k+1). Se pueden aÃ±adir tantos armÃ³nicos como
 ##        se desee, pero todos los anteriores elementos deben tener un valor. Por ejemplo.
-##        si se quiere añadir el 3º y 5º armónico con amplitudes por unidad de 0.1
-##        y 0.01 respectivamente, Harm=[0 0.1 0 0.01]. El 2º y 4º armónico deben
+##        si se quiere aÃ±adir el 3Âº y 5Âº armÃ³nico con amplitudes por unidad de 0.1
+##        y 0.01 respectivamente, Harm=[0 0.1 0 0.01]. El 2Âº y 4Âº armÃ³nico deben
 ##        incluirse, con el valor deseado 0.
 ##
 ##  tinit: Instante temporal de inicio del evento
 ##
 ##  tend: Instante temporal de fin del evento
 ##
-##  La señal de salida v_out es una matriz 3XN, siendo las filas 1, 2, 3 las
-##  señales vr, vs, vt con la perturbación sag añadida en el instante temporal
+##  La seÃ±al de salida v_out es una matriz 3XN, siendo las filas 1, 2, 3 las
+##  seÃ±ales vr, vs, vt con la perturbaciÃ³n sag aÃ±adida en el instante temporal
 ##  configurado.
 ##
-##  Si el instante temporal configurado está fuera de la ventana mostrada en la
-##  señal de entrada, o no puede ser mostrada en su totalidad, la función 
-##  devuelve v_out acorde a la configuración, pero indica en la ventana de comando
+##  Si el instante temporal configurado estÃ¡ fuera de la ventana mostrada en la
+##  seÃ±al de entrada, o no puede ser mostrada en su totalidad, la funciÃ³n 
+##  devuelve v_out acorde a la configuraciÃ³n, pero indica en la ventana de comando
 ##  este hecho.
 ##  
-##  La función calcula la frecuencia fundamental de la señal trifásica x, y 
-##  calcula los armónicos a partir de esta información.
+##  La funciÃ³n calcula la frecuencia fundamental de la seÃ±al trifÃ¡sica x, y 
+##  calcula los armÃ³nicos a partir de esta informaciÃ³n.
 ##  
 ## @deftypefn {} {@var{v_out} =} Harmonics_Transient(@var{v_input}, @var{fsampling}, @var{Harm}, @var{tinit}, @var{tend})
 ##
 ## @seealso{https://zigorcorp.sharepoint.com/:b:/s/UTI/EfGBWx4vW-tOodR8OONEG8wBv_GYyC9JAnpmUFV0lev1Zg?e=nCvfr9}
-## Author: Dr. Carlos Romero Pérez <cromero@@zigor.com>
+## Author: Dr. Carlos Romero PÃ©rez <cromero@@zigor.com>
 ## Created: 2024-10-08
 ## Copyright (C) 2024 ZGR R&D AIE
 ## @end deftypefn
 
 function v_out = Harmonics_Transient (v_input, fsampling, harm, tinit, tend)
   
-  % Validación de entradas
+  % ValidaciÃ³n de entradas
   [filas,columnas]=size(v_input);
   
   if(filas!=3 || columnas<1)
-    error('La señal de entrada tiene que ser una matriz 3 X N, con N>=1');
+    error('La seÃ±al de entrada tiene que ser una matriz 3 X N, con N>=1');
   endif
   
   if(isnumeric(v_input)==false || isnumeric(fsampling)==false ||isnumeric(harm)==false||isnumeric(tinit)==false||isnumeric(tend)==false)
-    error('Los parámetros de entrada a la función deben ser numéricos');
+    error('Los parÃ¡metros de entrada a la funciÃ³n deben ser numÃ©ricos');
   endif
   
   if(fsampling<=0 || tinit <0 || tend<=0)
-    error('Parámetros de entrada negativos');
+    error('ParÃ¡metros de entrada negativos');
   endif
   
   if(tend<=tinit)
@@ -66,7 +66,7 @@ function v_out = Harmonics_Transient (v_input, fsampling, harm, tinit, tend)
   
   [filh,colh]=size(harm);
   if(filh>1 && colh>1)
-    error('El parámetro harm debe ser un vector fila');
+    error('El parÃ¡metro harm debe ser un vector fila');
   elseif (filh>colh)
     harm=harm';
   endif
@@ -83,7 +83,7 @@ function v_out = Harmonics_Transient (v_input, fsampling, harm, tinit, tend)
   X2max=X2(indmax+1);
   X3max=X3(indmax+1);
     
-  % Generación de armónicos
+  % GeneraciÃ³n de armÃ³nicos
   
   X1arm=zeros(1,columnas);
   X2arm=zeros(1,columnas);
@@ -129,7 +129,7 @@ function v_out = Harmonics_Transient (v_input, fsampling, harm, tinit, tend)
     flag_evento=1;
   endif
   
-  %Calcula índices de inicio y fin de evento
+  %Calcula Ã­ndices de inicio y fin de evento
   if(flag_evento!=-1)
     indini=floor(tinit*fsampling);
     if indini==0

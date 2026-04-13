@@ -62,7 +62,7 @@ while (n<=N)
   if (q==1)
     % Cálculos que se realizan en cada ciclo de control
     % Cálculo de la amplitud de la corriente de AC para suministrar Sref
-    Im=2/3*Sref*Snom/(Vfnrmsred*sqrt(2))
+    Im=2/3*Sref*Snom/(Vfnrmsred*sqrt(2));
     phi=atan(Qref/Plim);
     % Cáculo de la tensión de salida del inversor para suministrar Sref
     Vinvvac=sqrt((Vfnrmsred*sqrt(2)-wred*Lac*Im*sin(phi))^2+(wred*Lac*Im*cos(phi))^2);

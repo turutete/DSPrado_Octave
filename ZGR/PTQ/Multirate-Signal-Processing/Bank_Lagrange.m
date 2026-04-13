@@ -37,7 +37,7 @@
 
 function W = Bank_Lagrange (x, M, R)
 
-  MAX_NIVELES=8;    % Máximo número de niveles de descomposición
+  MAX_NIVELES=10;    % Máximo número de niveles de descomposición
 
   if (isnumeric(x)==false || isnumeric(M)==false || isnumeric(R)==false)
     error("Los parámetros de entrada deben ser numéricos");

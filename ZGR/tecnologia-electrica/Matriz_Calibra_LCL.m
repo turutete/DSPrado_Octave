@@ -1,10 +1,10 @@
 %
 % Matriz_Calibra_LCL.m
 %
-% Autor: Dr. Carlos Romero P閞ez
+% Autor: Dr. Carlos Romero P茅rez
 % 21/05/2024
 %
-% Script demostrador de c醠culo de matriz de calibraci髇 de la rotaci髇
+% Script demostrador de c谩lculo de matriz de calibraci贸n de la rotaci贸n
 % del filtro LCL del inversor
 %
 
@@ -13,7 +13,7 @@ R=50;             % Carga en ohms
 N=64;
 l=1:N;
 
-% Matriz Rotaci髇
+% Matriz Rotaci贸n
 MR=[cos(theta) -sin(theta); sin(theta) cos(theta)];
 
 vr(l)=cos(2*pi*(l-1)/N);   % 1 ciclo vr(t)
@@ -41,7 +41,7 @@ MSrinv=[real(Srinv);imag(Srinv)];
 MSsinv=[real(Ssinv);imag(Ssinv)];
 MStinv=[real(Stinv);imag(Stinv)];
 
-% Rotaci髇 causada por el filtro LCL
+% Rotaci贸n causada por el filtro LCL
 MSrout=MR*MSrinv;
 MSsout=MR*MSsinv;
 MStout=MR*MStinv;
@@ -50,12 +50,12 @@ MStout=MR*MStinv;
 SRout=MSrout(1)+j*MSrout(2);
 polar(arg(SRout),abs(SRout),'o');
 
-% Generaci髇 de se馻les compuestas
+% Generaci贸n de se帽ales compuestas
 vrs=vr-vs;
 vst=vs-vt;
 vtr=vt-vr;
 
-% Algoritmo de calibraci髇
+% Algoritmo de calibraci贸n
 Pset=real(Srinv);
 Qset=0;
 
@@ -67,7 +67,7 @@ r2=(Pset*Qmeas-Qset*Pmeas)/(Pset^2+Qset^2);
 
 Rcal=[r1 r2;-r2 r1];
 
-% Uso de la calibraci髇
+% Uso de la calibraci贸n
 Scal=Rcal*[Pset;Qset];
 Sout=MR*Scal;
 

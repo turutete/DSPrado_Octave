@@ -3,8 +3,8 @@
 ##
 ##  Prototype:  [h0;h1;g0;g1]=FQC(h)
 ##
-##  Esta funciÛn calcula los filtros conjugados en cuadratura del filtro LP 
-##  de entrada FIR H0(z), cuyos coeficientes son el par·metro de entrada.
+##  Esta funci√≥n calcula los filtros conjugados en cuadratura del filtro LP 
+##  de entrada FIR H0(z), cuyos coeficientes son el par√°metro de entrada.
 ##
 ##  Los fitros FQC de salida son
 ##  h0=h
@@ -27,13 +27,13 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see
 ## <https://www.gnu.org/licenses/>.
-## Author: Dr. Carlos Romero PÈrez
+## Author: Dr. Carlos Romero P√©rez
 ## Created: 2024-03-03
 
 function retval = FQC (h)
   
   if (isvector(h)==false || isnumeric(h)==false)
-    error('El par·metro de entrada debe ser un vector de coeficientes de un filtro FIR');
+    error('El par√°metro de entrada debe ser un vector de coeficientes de un filtro FIR');
   endif
   
  [fil, col]=size(h);

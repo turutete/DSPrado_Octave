@@ -31,7 +31,7 @@ function E = Esperanza (x)
   
   %Control de entrada
   if (isnumeric(x)==false)
-    error("La entrada no es numérica");
+    error("La entrada no es numÃ©rica");
   endif
   
   if (isvector(x)==false)

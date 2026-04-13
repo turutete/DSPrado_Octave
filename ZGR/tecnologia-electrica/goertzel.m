@@ -20,19 +20,19 @@ function retval = goertzel (x, N, K)
 
 ## Control de argumentos de entrada
 if (isnumeric(x) ==0 || isnumeric(N)==0 || isnumeric(K)==0)
-  error("Los par·metros de entrada deben ser numÈricos");
+  error("Los par√°metros de entrada deben ser num√©ricos");
 endif
 
 if(isvector(x)==0)
-error("El par·metros x de entrada debe ser un vector");
+error("El par√°metros x de entrada debe ser un vector");
 endif
 
 if(isscalar(N)==0 || N<=0)
-error("El par·metro N debe ser un entero positivo)");
+error("El par√°metro N debe ser un entero positivo)");
 endif
 
 if(isscalar(K)==0 || K<0 || K>=N)
-error("El par·metro K debe estar en el rano [0 N-1]");
+error("El par√°metro K debe estar en el rano [0 N-1]");
 endif
 
 if(isfloat(K)==1)

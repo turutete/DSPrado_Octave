@@ -2,14 +2,14 @@
 ##
 ## Neural_Trigger.m
 ##
-## Esta funci髇 ejecuta la l骻ica de disparo de redes neuronales.
+## Esta funci贸n ejecuta la l贸gica de disparo de redes neuronales.
 ##
-## Los par醡etros de entrada son:
+## Los par谩metros de entrada son:
 ##
 ## X: Vector de Na entradas X [Na x 1].
 ## P: Matriz de pesos  P=[Nb X Na].
 ## B: Bias de las neuronas B=[Nb 1].
-## D: Cadena de caracteres de selecci髇 de la funci髇 de disparo:
+## D: Cadena de caracteres de selecci贸n de la funci贸n de disparo:
 ##
 ##    "sigm"
 ##    "tanh"
@@ -18,10 +18,10 @@
 ##    "soft"
 ##    "step"
 ##
-## La funci髇 retorna el valor resultante de aplicar la funci髇 de disparo a
+## La funci贸n retorna el valor resultante de aplicar la funci贸n de disparo a
 ## yout=F(P*X+B)
 ##
-## Author: Dr. Carlos Romero P閞ez
+## Author: Dr. Carlos Romero P茅rez
 ## Created: 2025-04-08
 ## Copyright (C) 2025 Zigor R&D AIE
 ##
@@ -33,19 +33,19 @@
 function yout = Neural_Trigger (X,P,B,strfuncion)
 
   if (isnumeric(X)==false || isnumeric(P)==false || isnumeric(B)==false)
-    error("Los par醡etros de entrada X, P y B deben ser num閞icos");
+    error("Los par谩metros de entrada X, P y B deben ser num茅ricos");
   endif
 
   if (ischar(strfuncion)==false)
-    error("El par醡etro de entrada strfuncion debe ser una de las cadenas soportadas");
+    error("El par谩metro de entrada strfuncion debe ser una de las cadenas soportadas");
   endif
 
   if (length(strfuncion)!=4)
-    error("Nombre de la funci髇 incorrecta");
+    error("Nombre de la funci贸n incorrecta");
   endif
 
   if (isvector(X)==false || isvector(B)==false)
-    error("Los par醡etros de entrada X y B deben ser vectores");
+    error("Los par谩metros de entrada X y B deben ser vectores");
   endif
 
   [fil1,col1]=size(X);
@@ -53,7 +53,7 @@ function yout = Neural_Trigger (X,P,B,strfuncion)
   [fil3,col3]=size(B);
 
   if (col1!=1 || col3!=1)
-    error(" Los par醡etros de entrada X y B deben vectores filas ");
+    error(" Los par谩metros de entrada X y B deben vectores filas ");
   endif
 
   if (col2!=fil1 || fil3!= fil2)
@@ -76,7 +76,7 @@ function yout = Neural_Trigger (X,P,B,strfuncion)
   elseif (strfuncion=="sigm")
     yout=1.0./(1.0+exp(-yin));
   else
-    error("Funci髇 no soportada");
+    error("Funci贸n no soportada");
   endif
 
 endfunction
