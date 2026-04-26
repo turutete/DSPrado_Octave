@@ -2,6 +2,9 @@
 # Detección de Arco Eléctrico Mediante Técnicas de Procesamiento Digital
 # de Señales No Estacionarias
 #
+# Autor: Dr. Carlos Romero Pérez
+# Fecha: 18/04/2026
+#
 
 inverter= menu("TIPO INVERSOR","PV","PCS");
 inversor=inverter-1;
@@ -13,8 +16,6 @@ flag_tipo_arco=flag_tipo_arco-1;
 % Inicialización de variables aleatorias
 flag_aleatorio=0;                 % 0:No hay variables aleatorias 1: Hay aleatoriedad
 
-% Selecciona modelo de corriente DC
-modelo_idc=1;   % 0: Modelo simple idc es senoide 300Hz 1: Modelo real conmutación
 
 # Inicialización de variables de entorno
 Fs=49000 ;                        % Freqcuencia de muestreo de las señales analógicas en Hz
@@ -28,10 +29,15 @@ Vfnrmsred=Vffrmsred/sqrt(3);      % Tensión RMS de red fase neutro
 Snom=4.5e6;                       % Potencia aparente nominal del equipo
 Lac=150e-6;                       % Inductancia del filtro LC en H
 Cdc=53e-3;                        % Condensador del bus DC en F
-M=1;                              % Índice de modulación por defecto (M=Vinv/(Vdc/2))
 rampa=0.1;                        % Rampa %Snominal/s
 Rbat=0.005;                       % Tensión thevening de la batería
 Vcaida=16.549;                    % Caida de Vdc por Rbat
+
+
+# Variables de actualización cada Fcontrol
+Ncontrol=Fs/Fcontrol;
+flag_control=1;
+contador_control=0;
 
 # Consignas para el caso de uso PREF VARIABLE
 Pliminit=0.8;
@@ -168,12 +174,18 @@ iacr=[];               % Forma de onda de la corriente de salida fase R
 iacs=[];               % Forma de onda de la corriente de salida fase S
 iact=[];               % Forma de onda de la corriente de salida fase T
 
-vacr=[];               % Forma de onda de la tensión de salida R
-vacs=[];               % Forma de onda de la tensión de salida S
-vact=[];               % Forma de onda de la tensión de salida T
+vacr=[];               % Forma de onda teórica de la tensión de salida R
+vacs=[];               % Forma de onda teórica de la tensión de salida S
+vact=[];               % Forma de onda teórica de la tensión de salida T
+
+vrn=[];                 % Tensión fase r de salida del inversor
+vsn=[];                 % Tensión fase s de salida del inversor
+vtn=[];                 % Tensión fase t de salida del inversor
 
 idc=[];                 % Corriente del bus DC
 vdc=[];                 % Tensión del bus DC
+idcin=[];               % Corriente de PV o Batería
+icd=[];                 % Corriente por el condensador del bus
 
 iarcdc=zeros(1,N);      % Corriente de arco DC
 iarcac=zeros(1,N);      % Corriente de arco AC
@@ -274,7 +286,7 @@ if (inversor==0)
   Idcaux=Idc_Panel_Modelo(Vdc,Iscpanel,Vocpanel, Vmpptpanel, Impptpanel);
   Ipv=Idcaux*Npanelp;
 else
-  Vpv=Vbateria;       % La tensión del bus es constante con baterías
+  Vpv=Vbateria;       % La tensión de entrada al bus es constante con baterías
 endif
 
 
@@ -345,10 +357,13 @@ while (n<=N)
 
   Sref=sqrt(Plim^2+Qref^2);
 
-
-  % Conocido el valor de la tensión de bus DC, se puede calcular el valor de la
-  % amplitud de las corrientes de fase Ir, Is, It para inyectar la Plim y Qref
-  % solicitada. Llamamos a esta amplitud Im. También conocemos el desfase solicitado
+  % Conocida la potencia aparente demandada, podemos calcular la corriente AC
+  % de salida que hay que generar, ya que la tensión de red es conocida y no
+  % depende de la dinámica interna del inversor.
+  %
+  % Llamamos a la amplitud de las corrientes de fase Im.
+  %
+  % El desfase de Ir, Is, It respecto También conocemos el desfase solicitado
   %
   % Im=2/3* Sref/(Vfnrmsred*sqrt(2))
   %
@@ -359,7 +374,7 @@ while (n<=N)
   % it(t)=Im*cos(wred t + phi +2pi/3)
   %
 
-  Im=max(2/3*Sref*Snom/(Vfnrmsred*sqrt(2)),0);    % Im no puede ser negativo
+  Im=2/3*Sref*Snom/(Vfnrmsred*sqrt(2));
   phi=atan(Qref/Plim);
 
   % Ahora queremos calcular la amplitud de la tensión de salida trifásica que
@@ -380,19 +395,32 @@ while (n<=N)
 
   % El índice de modulación se obtiene de la expresión
   % Vinvvac=M*Vdc/2
-  if (inversor==0)
-    if (n==1)
-      M=2*Vinvvac/(Vdc*Npanels);
+
+  if (flag_control==1)
+    % El valor de M se actualiza cada ciclo de control
+    if (inversor==0)
+      if (n==1)
+        M=2*Vinvvac/(Vdc*Npanels);
+      else
+        M=2*Vinvvac/Vpv;
+      endif
     else
-      M=2*Vinvvac/Vpv;
+      M=2*Vinvvac/v0z1;
     endif
-  else
-    M=2*Vinvvac/Vpv;
+
+    if (M>1.15)
+      M=1.15;         % Saturación que se pone al índice de modulación para no aumentar THD
+    endif
+
+    flag_control=0;
+    contador_control=0;
   endif
 
-  if (M>1.15)
-    M=1.15;         % Saturación que se pone al índice de modulación para no aumentar THD
+  contador_control=contador_control+1;
+  if (contador_control==Ncontrol)
+    flag_control=1;
   endif
+
 
   % Generamos la corriente de arco, según sea el tipo de arco seleccionado
   if (n>=indarc)
@@ -413,33 +441,24 @@ while (n<=N)
     Iarcdc=0;
   endif
 
-  % Si se ha producido arco AC las corrientes de fase medidas por el inversor
-  % serán:
+  % La corriente que se desea generar es:
   %
   % ir(t)= Im cos(wred t+ phi) + Iarc(t)
   % is(t)= Im cos(wred t + phi -2pi/3)
   % it(t)= Im cos(wred t + phi +2pi/3)
 
-  iacr(n)= Im*cos(wred*(n-1)/Fs+phi)-Iarcac;
+  iacr(n)= Im*cos(wred*(n-1)/Fs+phi);
   iacs(n)= Im*cos(wred*(n-1)/Fs+phi-2*pi/3);
   iact(n)= Im*cos(wred*(n-1)/Fs+phi+2*pi/3);
 
 
   % Analizamos ahora la parte de DC
   %
-  % Hemos calculado el valor del íncide de modulación M necesario
+  % Hemos calculado el valor del índice de modulación M necesario
   % para generar el Plim que solicita la eléctrica.
   %
   % En un inversor con etapa de potencia en 3 niveles, el valor de la corriente
   % en el bus de DC idc(t) se puede expresar del siguiente modo:
-  %
-  % Modelo 0:
-  % idc(t)=Sum (M*cos(wx t)*(sign(cos(wx t)+1)/2))*Im*cos(wx t+phi)
-  %         x=r,s,t
-  %
-  % siendo wr t=wred t , ws t = wred t - 2pi/3  y wt t= wred t + 2pi/3
-  %
-  % Modelo 1:
   %
   % Se genera la portadora PWM v_tri que es una triangular de frecuencia
   % Fcontrol. Esta portadora se usa para genera las PWM de cada fase Sx.
@@ -452,11 +471,11 @@ while (n<=N)
   % Spx = (mod_x>0)*(mod_x>=v_tri)
   % Snx = (mod_x<0)*(mod_x<=-v_tri)
   %
-  % Spx y Sns son señales digitals (0,1). '1' activa los igbts de la rama positiva
+  % Spx y Sns son señales digitales (0,1). '1' activa los igbts de la rama positiva
   % o negativa, según sea el semiperiodo de la moduladora (que es la señal que
   % se está codificando.
   %
-  % Las corrientes de la rama positva y negativa vendrán dadas por:
+  % Las corrientes de la rama positiva y negativa vendrán dadas por:
   %
   % idcpx=Spx*Im*cos(wredx t +phi)
   % idcnx=SnxÎm*cons(wredx t +phi)
@@ -472,91 +491,100 @@ while (n<=N)
   %
   % donde phix=0, -2pi/3, 2pi/3
   %
-  % Estas señales de idcx son realistas, no como la del modelo 0
+  % Estas señales de idcx son realistas
   %
 
-  if (modelo_idc==0)
-    idcr=M*cos(wred*(n-1)/Fs)*((sign(cos(wred*(n-1)/Fs))+1)/2)*Im*cos(wred*(n-1)/Fs+phi);
-    idcs=M*cos(wred*(n-1)/Fs-2*pi/3)*((sign(cos(wred*(n-1)/Fs-2*pi/3))+1)/2)*Im*cos(wred*(n-1)/Fs-2*pi/3+phi);
-    idct=M*cos(wred*(n-1)/Fs+2*pi/3)*((sign(cos(wred*(n-1)/Fs+2*pi/3))+1)/2)*Im*cos(wred*(n-1)/Fs+2*pi/3+phi);
+
+
+  % Generamos la señal triangular, que es la misma para las 3 fases
+  if (n==1)
+    % Calculamos la señal completa para toda la simulación. Por eso sólo lo
+    % hacemos una vez, cuando n=1
+    % Es una señal triangular de -1 a 1. La frecuencia es Fcontrol, y tiene
+    % Fs/Fcontrol muestras por ciclo
+    %
+    % Esta señal es la que se usa para comparar con la señal senoidal que se quiere
+    % codificar.
+    v_tri = 2*abs(2*mod(Fcontrol*(q-1)/Fs, 1) - 1) - 1;
+
+    idcprmax=0;
   endif
-  if (modelo_idc==1)
-    % Generamos la señal triangular, que es la misma para las 3 fases
-    if (n==1)
-      % Calculamos la señal completa para toda la simulación. Por eso sólo lo
-      % hacemos una vez, cuando n=1
-      % Es una señal triangular de -1 a 1. La frecuencia es Fcontrol, y tiene
-      % Fs/Fcontrol muestras por ciclo
-      %
-      % Esta señal es la que se usa para comparar con la señal senoidal que se quiere
-      % codificar.
-      v_tri = 2*abs(2*mod(Fcontrol*(q-1)/Fs, 1) - 1) - 1;
 
-      idcprmax=0;
-    endif
+  % Generamos también las señales moduladoras, que son las que se quieren
+  % obtener tras demodular las PWM. Como M puede variar durante la simulación
+  % hay que calcularlo muestra a muestra
 
-    % Generamos también las señales moduladoras, que son las que se quieren
-    % obtener tras demodular las PWM. Como M puede variar durante la simulación
-    % hay que calcularlo muestra a muestra
-
-    mod_r= M*cos(wred*(n-1)/Fs);
-    mod_s= M*cos(wred*(n-1)/Fs-2*pi/3);
-    mod_t= M*cos(wred*(n-1)/Fs+2*pi/3);
+  mod_r= M*cos(wred*(n-1)/Fs);
+  mod_s= M*cos(wred*(n-1)/Fs-2*pi/3);
+  mod_t= M*cos(wred*(n-1)/Fs+2*pi/3);
 
 
-    % Las señales Spx y Snx (x=r,s,t) son las señales PWM de cada una de las fases.
-    % positiva y negativa.
-    %
-    % Se generan comparando las señales senoidales que se quieren generar,
-    % es decir, mod_x, con la triangular.
-    %
+  % Las señales Spx y Snx (x=r,s,t) son las señales PWM de cada una de las fases.
+  % positiva y negativa.
+  %
+  % Se generan comparando las señales senoidales que se quieren generar,
+  % es decir, mod_x, con la triangular.
+  %
 
-    Spr = (mod_r > 0) .* (mod_r >= (v_tri(n) + 1) / 2);
-    Snr = (mod_r < 0) .* (mod_r <= (v_tri(n) - 1) / 2);
+  Spr = (mod_r > 0) .* (mod_r >= (v_tri(n) + 1) / 2);
+  Snr = (mod_r < 0) .* (mod_r <= (v_tri(n) - 1) / 2);
 
-    Sps = (mod_s > 0) .* (mod_s >= (v_tri(n) + 1) / 2);
-    Sns = (mod_s < 0) .* (mod_s <= (v_tri(n) - 1) / 2);
+  Sps = (mod_s > 0) .* (mod_s >= (v_tri(n) + 1) / 2);
+  Sns = (mod_s < 0) .* (mod_s <= (v_tri(n) - 1) / 2);
 
-    Spt = (mod_t > 0) .* (mod_t >= (v_tri(n) + 1) / 2);
-    Snt = (mod_t < 0) .* (mod_t <= (v_tri(n) - 1) / 2);
+  Spt = (mod_t > 0) .* (mod_t >= (v_tri(n) + 1) / 2);
+  Snt = (mod_t < 0) .* (mod_t <= (v_tri(n) - 1) / 2);
 
 
-    % Calculamos la forma de onda de las corrientes idcpx(n)e idcnx,
-    % que son las corriente en las ramas positivas y negativas de cada fase.
-    %
-    % La corriente total de cada fase x será la suma de ambas contribuciones
-    %
-    % idcx=idcpx+idcnx.
-    %
 
-    idcpr=Spr*Im*cos(wred*(n-1)/Fs +phi);
-    idcnr=Snr*Im*cos(wred*(n-1)/Fs +phi);
-    idcr=idcpr+idcnr;
+  % Calculamos la forma de onda de las corrientes idcpx(n)e idcnx,
+  % que son las corriente en las ramas positivas y negativas de cada fase.
+  %
+  % La corriente total de cada fase x será la suma de ambas contribuciones
+  %
+  % idcx=idcpx+idcnx.
+  %
 
-    idcps=Sps*Im*cos(wred*(n-1)/Fs +phi-2*pi/3);
-    idcns=Sns*Im*cos(wred*(n-1)/Fs +phi-2*pi/3);
-    idcs=idcps+idcns;
+  idcpr=Spr*Im*cos(wred*(n-1)/Fs +phi);
+  idcnr=Snr*Im*cos(wred*(n-1)/Fs +phi);
+  idcr=idcpr+idcnr;
 
-    idcpt=Spt*Im*cos(wred*(n-1)/Fs +phi+2*pi/3);
-    idcnt=Snt*Im*cos(wred*(n-1)/Fs +phi+2*pi/3);
-    idct=idcpt+idcnt;
+  idcps=Sps*Im*cos(wred*(n-1)/Fs +phi-2*pi/3);
+  idcns=Sns*Im*cos(wred*(n-1)/Fs +phi-2*pi/3);
+  idcs=idcps+idcns;
 
-    if (idcpr>idcprmax)
-      idcprmax=idcpr;
-    endif
+  idcpt=Spt*Im*cos(wred*(n-1)/Fs +phi+2*pi/3);
+  idcnt=Snt*Im*cos(wred*(n-1)/Fs +phi+2*pi/3);
+  idct=idcpt+idcnt;
 
+  if (idcpr>idcprmax)
+    idcprmax=idcpr;
   endif
+
 
   % Solo sumamos las positivas. Las negativas son iguales pero de sentido contrario
   %
+  idc(n)=idcpr+idcps+idcpt;
 
-  idc(n)=idcpr+idcps+idcpt+Iarcdc;
+  % Las tensiones trifásicas
 
   % Cálculo del valor de tensión en bus dc V0(n)
   xdcin=Vpv-Rbat*idc(n);
   vdc(n)=vdcz1*Bdc1-v0z1*Adc1;
   v0z1=vdc(n);
   vdcz1=xdcin;
+
+  % Cálculo de la corriente de salida de la batería
+  idcin(n)=(Vbateria-vdc(n))/Rbat;
+
+  % Cálculo de la corriente por el condensador de DC Ic(s)=C S V0(s)
+
+  icd(n)=idcin(n)-idc(n);
+
+  % Tensiones Vr, Vs, Vt
+  vrn(n) = (Spr - Snr) * (vdc(n)/ 2);
+  vsn(n) = (Sps - Sns) * (vdc(n) / 2);
+  vtn(n) = (Spt - Snt) * (vdc(n) / 2);
 
 
   if (inversor==0)
