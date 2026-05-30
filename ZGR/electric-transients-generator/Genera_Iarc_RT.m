@@ -65,7 +65,7 @@ persistent Pnprev_vect;
  endif
 
 % Modelo de arco eléctrico
-Rl_arco=10;             % Resistencia de carga del camino en ohms
+Rl_arco=1;              % Resistencia de carga del camino en ohms
 Vd=450;                 % Tensión de avalancha en V
 Id=0.1;                 % Corriente de inicio de avalancha en A
 V0=25;                  % Tensión electromotriz del arco en V
