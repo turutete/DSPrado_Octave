@@ -14,7 +14,7 @@
 ## El sistema se modela como un campo fotovoltaico (Npanels en serie x Npanelp
 ## en paralelo) representado como una fuente de tensión Vpv con una resistencia
 ## Rgen en serie. Esta fuente alimenta el bus DC (condensador Cdc), que a su
-## vez alimenta un puente trifásico de dos niveles. La salida del puente pasa
+## vez alimenta un puente trifásico NPC de tres niveles. La salida del puente pasa
 ## por un filtro inductivo Lac que la conecta a la red trifásica de 690 V /
 ## 50 Hz. La red se considera una fuente de tensión ideal (sin impedancia
 ## equivalente), a la que el inversor se sincroniza.
@@ -114,10 +114,12 @@
 ##   menos las pérdidas óhmicas reales en la bobina del filtro (estimadas
 ##   con las corrientes instantáneas ir, is, it). El PI corrige pequeñas
 ##   desviaciones. El control corre a Fcontrol = 2.45 kHz, con frecuencia
-##   de corte del lazo cerrado de 1 Hz, y delta saturado en ±π/4 con
+##   de corte del lazo cerrado de 3 Hz, y delta saturado en ±π/4 con
 ##   anti-windup por congelación del integrador.
-## - Paneles operando en condiciones STC constantes (Su = 1, T = 25 °C). No se
-##   contempla variación de irradiancia ni temperatura durante la simulación.
+## - Paneles operando en condiciones (Su, T) constantes durante la simulación,
+##   fijadas antes del bucle. Pueden ser deterministas (Su=1, T=25 ºC con
+##   flag_aleatorio=0) o aleatorias dentro de rangos predefinidos
+##   (flag_aleatorio=1).
 ## - Inversor ideal: sin pérdidas de conmutación, sin tiempo muerto, sin caída
 ##   en los semiconductores.
 ##
@@ -136,16 +138,46 @@
 ## @section pendiente Funcionalidad pendiente de implementar
 ## - Generación del evento de caída súbita de campo fotovoltaico (modificación
 ##   dinámica de Vpv y/o Ipv durante la simulación).
-## - Modelo de arco DC en el bus (vector iarcdc, ya pre-reservado).
-## - Modelo de arco AC en la salida (vector iarcac, ya pre-reservado).
 ## - Cálculo de las tensiones de fase a la salida del inversor antes de Lac
 ##   (vrn, vsn, vtn, ya pre-reservadas).
-## - Análisis post-simulación: detección de superación de umbrales (Vdcmax,
-##   Idcmax, Vacmax, Iacmax) y temporización de los disparos de protección.
+##
+## @section protecciones Sistema de protecciones
+## El inversor incluye protecciones por sobretensión y sobrecorriente DC y AC,
+## y por corriente inversa DC (los paneles fotovoltaicos no aceptan corriente
+## negativa sostenida). El disparo se produce al cruzar uno cualquiera de
+## los umbrales sobre las señales filtradas para protección (vdcprot,
+## idcprot, irmed/ismed/itmed), registrando la muestra del disparo (n_trip)
+## y el motivo (motivo_trip).
+##
+## Las señales del bus DC (vdc, idc) llevan un filtro adicional elíptico
+## de orden 2 a Fmed=10 Hz, aplicado en cascada sobre el filtro de medida
+## general a Fp=100 Hz. Este filtro adicional atenúa fuertemente (>40 dB) el
+## rizado a 300 Hz típico del bus DC en un puente trifásico, evitando
+## disparos espúrios. No se aplica a las corrientes AC (ir, is, it) porque
+## un filtro a 10 Hz atenuaría también la fundamental a 50 Hz.
+##
+## Durante los primeros Tinhibicion_prot segundos desde el arranque las
+## protecciones se inhiben para evitar disparos espúrios por el transitorio
+## inicial del simulador (estabilización del filtro elíptico de medida y
+## acomodación de las variables de estado).
+##
+## Tras el disparo se activan tres procesos en cascada:
+##   1) Bloqueo de los IGBTs (Tbloqueo_igbts después del trip): se anulan
+##      los PWM y los diodos de libre circulación rectifican pasivamente la
+##      corriente residual del filtro Lac, devolviéndola al bus DC.
+##   2) Apertura del disyuntor AC (Tabre_ac después del trip): las corrientes
+##      del filtro se fuerzan a 0.
+##   3) Apertura del disyuntor DC (Tabre_dc después del trip): los paneles
+##      se desconectan del bus, Ipv=0, y el bus queda con su dinámica natural
+##      Cdc·dV0/dt = -Idc.
+## Los tiempos de apertura son parametrizables (rangos min-max) y pueden
+## tomarse aleatorios en cada simulación cuando flag_aleatorio=1. La
+## simulación continúa hasta n=N tras el trip para registrar la dinámica
+## post-disparo.
 ##
 ## @author Dr. Carlos Romero Pérez
 ## @date Creación: 25/04/2026
-## @date Última modificación: 20/05/2026
+## @date Última modificación: 31/05/2026
 ##
 
 ##
@@ -176,8 +208,31 @@
 ## @par Umbrales de protección (al 120 % del nominal)
 ## @var Vdcmax    Umbral de sobretensión DC del equipo (V).
 ## @var Idcmax    Umbral de sobrecorriente DC del equipo (A).
+## @var Idc_inv_max Umbral de corriente inversa DC, -10 % de Idcnom (A).
 ## @var Vacmax    Umbral de sobretensión AC del equipo, en pico (V).
 ## @var Iacmax    Umbral de sobrecorriente AC del equipo, en pico (A).
+##
+## @par Configuración del sistema de protecciones
+## @var Tabre_dc_min  Tiempo mínimo de apertura del disyuntor DC (s).
+## @var Tabre_dc_max  Tiempo máximo de apertura del disyuntor DC (s).
+## @var Tabre_ac_min  Tiempo mínimo de apertura del disyuntor AC (s).
+## @var Tabre_ac_max  Tiempo máximo de apertura del disyuntor AC (s).
+## @var Tbloqueo_igbts  Tiempo entre la detección del trip y el bloqueo efectivo de los IGBTs (s).
+## @var Tinhibicion_prot Tiempo de inhibición de protecciones al arranque de la simulación (s).
+## @var Tabre_dc      Tiempo efectivo de apertura del disyuntor DC en esta simulación (s).
+## @var Tabre_ac      Tiempo efectivo de apertura del disyuntor AC en esta simulación (s).
+## @var Nabre_dc      Tiempo Tabre_dc convertido a número de muestras.
+## @var Nabre_ac      Tiempo Tabre_ac convertido a número de muestras.
+## @var Nbloqueo_igbts Tiempo Tbloqueo_igbts convertido a número de muestras.
+## @var Ninhibicion_prot Tiempo Tinhibicion_prot convertido a número de muestras.
+## @var n_trip        Muestra del disparo (0 si no hay disparo).
+## @var motivo_trip   Motivo del trip: "DC_overv", "DC_overc", "DC_invc", "AC_overc" o "NONE".
+## @var igbts_activos Estado actual de los IGBTs (1=activos, 0=bloqueados).
+## @var disy_dc_cerrado Estado actual del disyuntor DC (1=cerrado, 0=abierto).
+## @var disy_ac_cerrado Estado actual del disyuntor AC (1=cerrado, 0=abierto).
+## @var igbts_activos_v Vector con el estado de los IGBTs por muestra.
+## @var disy_dc_cerrado_v Vector con el estado del disyuntor DC por muestra.
+## @var disy_ac_cerrado_v Vector con el estado del disyuntor AC por muestra.
 ##
 ## @par Modelo del campo fotovoltaico
 ## @var Iscpanel    Corriente de cortocircuito de un panel (A).
@@ -315,6 +370,20 @@ Nel=2;                            % Orden de filtro elíptico
 
 [B,A]=ellip(Nel,Rp,Rs,Fp*2/Fs);   % Coeficientes del filtro
 
+% Filtro LP adicional para las medidas DC que usan las protecciones. Se aplica
+% en cascada sobre la salida del filtro anterior (vdcmed, idcmed). Frecuencia
+% de paso muy baja (10 Hz) para atenuar fuertemente (>40 dB) el rizado a
+% 300 Hz típico del bus DC en un puente trifásico, y evitar disparos espúrios
+% por rizado. NO se aplica a las corrientes AC (irmed, ismed, itmed), que
+% se vigilan directamente sobre el filtro de medida principal, porque un
+% filtro a 10 Hz atenuaría también la componente fundamental a 50 Hz.
+Fmed=10;                          % Frecuencia de paso del filtro de protecciones (Hz)
+Rpmed=0.01;                       % Rizado en banda de paso
+Rsmed=20;                         % Atenuación en banda de rechazo (dB)
+Nmed=2;                           % Orden del filtro elíptico
+
+[Bmed,Amed]=ellip(Nmed,Rpmed,Rsmed,Fmed*2/Fs);
+
 % Filtro Vdc
 vdcfz1=0;
 vdcfz2=0;
@@ -363,6 +432,12 @@ itfz2=0;
 itinz1=0;
 itinz2=0;
 
+% Retardos del filtro adicional para protecciones, aplicado en cascada
+% sobre vdcmed e idcmed. Se inicializan a 0 aquí y se reinicializan luego
+% en régimen permanente.
+vdcprot_fz1=0; vdcprot_fz2=0; vdcprot_inz1=0; vdcprot_inz2=0;
+idcprot_fz1=0; idcprot_fz2=0; idcprot_inz1=0; idcprot_inz2=0;
+
 
 # Consignas para casos de uso
 Plim=1;
@@ -396,9 +471,43 @@ endif
 Idcnom=Snom/Vdcnom;
 Vdcmax=Vdcnom*1.2;                % Umbral de sobretensión DC del equipo
 Idcmax=Snom/Vdcnom*1.2;           % Umbral de sobrecorriente DC del equipo
+Idc_inv_max=-0.1*Idcnom;          % Umbral de corriente inversa DC (PV no acepta corriente negativa sostenida)
 
 Iacmax=2*(Snom/3)/(Vfnrmsred*sqrt(2))*1.2;    % Umbral de sobrecorriente AC del equipo
 Vacmax=Vfnrmsred*sqrt(2)*1.2;                 % Umbral de sobretensión AC del equipo
+
+% Configuración del sistema de protecciones.
+%
+% Tiempos de apertura de disyuntores (mecánicos, en segundos). Si
+% flag_aleatorio==1, se toma un valor aleatorio entre min y max; si no,
+% se usa el valor min.
+Tabre_dc_min=30e-3;               % Tiempo mínimo de apertura disyuntor DC (s)
+Tabre_dc_max=80e-3;               % Tiempo máximo de apertura disyuntor DC (s)
+Tabre_ac_min=20e-3;               % Tiempo mínimo de apertura disyuntor AC (s)
+Tabre_ac_max=60e-3;               % Tiempo máximo de apertura disyuntor AC (s)
+Tbloqueo_igbts=1e-6;              % Tiempo de bloqueo de IGBTs tras detección del trip (s)
+Tinhibicion_prot=50e-3;           % Tiempo de inhibición de protecciones al arranque (s)
+
+if (flag_aleatorio==0)
+  Tabre_dc=Tabre_dc_min;
+  Tabre_ac=Tabre_ac_min;
+else
+  Tabre_dc=Tabre_dc_min+(Tabre_dc_max-Tabre_dc_min)*rand(1);
+  Tabre_ac=Tabre_ac_min+(Tabre_ac_max-Tabre_ac_min)*rand(1);
+endif
+
+% Pasar tiempos a número de muestras
+Nabre_dc=round(Tabre_dc*Fs);
+Nabre_ac=round(Tabre_ac*Fs);
+Nbloqueo_igbts=max(1,round(Tbloqueo_igbts*Fs));
+Ninhibicion_prot=round(Tinhibicion_prot*Fs);
+
+% Estado del sistema de protecciones (variables de estado)
+n_trip=0;                         % Muestra del disparo (0 = no hay disparo todavía)
+motivo_trip="NONE";               % Motivo del disparo (cadena)
+igbts_activos=1;                  % 1=IGBTs operativos, 0=bloqueados
+disy_dc_cerrado=1;                % 1=disyuntor DC cerrado, 0=abierto
+disy_ac_cerrado=1;                % 1=disyuntor AC cerrado, 0=abierto
 
 % Modelo de panel PV
 Np=1;
@@ -466,6 +575,11 @@ icd=[];                 % Corriente por el condensador del bus
 iarcdc=zeros(1,N);      % Corriente de arco DC
 iarcac=zeros(1,N);      % Corriente de arco AC
 
+% Vectores de estado de las protecciones (0/1 por muestra)
+igbts_activos_v=ones(1,N);     % 1=IGBTs operativos, 0=bloqueados
+disy_dc_cerrado_v=ones(1,N);   % 1=disyuntor DC cerrado, 0=abierto
+disy_ac_cerrado_v=ones(1,N);   % 1=disyuntor AC cerrado, 0=abierto
+
 % Formas de onda reales de Ir, Is, It (corrientes que pasan por Lac, medidas
 % por los sensores AC en el embarrado, antes del disyuntor)
 ir=[];
@@ -481,6 +595,11 @@ vtmed=[];
 irmed=[];
 ismed=[];
 itmed=[];
+
+% Vectores de medida adicional (filtro DC en cascada) que usan las
+% protecciones para evitar disparos espúrios por el rizado a 300 Hz del bus.
+vdcprot=[];
+idcprot=[];
 
 
 % Generamos las tensiones AC.
@@ -603,6 +722,14 @@ isinz1=Im*cos(-wred/Fs+phi-2*pi/3);    isinz2=Im*cos(-2*wred/Fs+phi-2*pi/3);
 itfz1=Im*cos(-wred/Fs+phi+2*pi/3);     itfz2=Im*cos(-2*wred/Fs+phi+2*pi/3);
 itinz1=Im*cos(-wred/Fs+phi+2*pi/3);    itinz2=Im*cos(-2*wred/Fs+phi+2*pi/3);
 
+% Filtros de protección (DC, cascada sobre vdcmed e idcmed). Inicialización
+% en régimen permanente: todos los retardos al valor DC nominal, porque
+% en régimen permanente vdcmed≈Vpv e idcmed≈Ipv_init.
+vdcprot_fz1=Vpv;        vdcprot_fz2=Vpv;
+vdcprot_inz1=Vpv;       vdcprot_inz2=Vpv;
+idcprot_fz1=Ipv_init;   idcprot_fz2=Ipv_init;
+idcprot_inz1=Ipv_init;  idcprot_inz2=Ipv_init;
+
 % Cálculo de la tensión que debe sintetizar el inversor antes del filtro Lac.
 %
 % Por Kirchhoff fasorial sobre la rama serie RLac + j·wred·Lac (con la red
@@ -716,6 +843,55 @@ PI_int=0;                                    % Estado del integrador (rad)
 
 while (n<=N)
 
+  % Sistema de protecciones.
+  %
+  % Vigila cuatro umbrales sobre señales filtradas (vdcmed, idcmed, irmed,
+  % ismed, itmed) y dispara el trip si alguno se supera. Tras el trip se
+  % activan tres procesos en cascada:
+  %   1) Bloqueo de IGBTs (Nbloqueo_igbts muestras tras el trip)
+  %   2) Apertura del disyuntor AC (Nabre_ac muestras tras el trip)
+  %   3) Apertura del disyuntor DC (Nabre_dc muestras tras el trip)
+  %
+  % Una vez disparado, n_trip queda fijo y la lógica no vuelve a reevaluar
+  % los umbrales. La simulación continúa hasta n=N para registrar la
+  % dinámica post-trip.
+  if (n>Ninhibicion_prot)   % Inhibición de protecciones durante el arranque
+    if (n_trip==0)
+      % Vigilar umbrales sólo si no ha habido trip todavía
+      if (vdcprot(n-1)>Vdcmax)
+        n_trip=n;
+        motivo_trip="DC_overv";
+      elseif (idcprot(n-1)>Idcmax)
+        n_trip=n;
+        motivo_trip="DC_overc";
+      elseif (idcprot(n-1)<Idc_inv_max)
+        n_trip=n;
+        motivo_trip="DC_invc";
+      elseif (abs(irmed(n-1))>Iacmax || abs(ismed(n-1))>Iacmax || abs(itmed(n-1))>Iacmax)
+        n_trip=n;
+        motivo_trip="AC_overc";
+      endif
+    endif
+  endif
+
+  % Actualización del estado de los actuadores de protección
+  if (n_trip>0)
+    if (n>=n_trip+Nbloqueo_igbts)
+      igbts_activos=0;
+    endif
+    if (n>=n_trip+Nabre_ac)
+      disy_ac_cerrado=0;
+    endif
+    if (n>=n_trip+Nabre_dc)
+      disy_dc_cerrado=0;
+    endif
+  endif
+
+  % Registro del estado por muestra
+  igbts_activos_v(n)=igbts_activos;
+  disy_dc_cerrado_v(n)=disy_dc_cerrado;
+  disy_ac_cerrado_v(n)=disy_ac_cerrado;
+
   % Generamos la corriente de arco, según sea el tipo de arco seleccionado.
   %
   % Topología modelada:
@@ -765,26 +941,61 @@ while (n<=N)
   % Generación de las señales PWM de cada fase y rama (positiva y negativa)
   % por comparación de la moduladora con la triangular reescalada (modulación
   % level-shifted de tres niveles).
+  %
+  % Si los IGBTs están bloqueados (post-trip), los PWM se fuerzan a 0 y la
+  % tensión sintetizada queda definida por los diodos de libre circulación
+  % (free-wheeling) según el signo de la corriente de fase.
 
-  Spr = (mod_r > 0) .* (mod_r >= (v_tri(n) + 1) / 2);
-  Snr = (mod_r < 0) .* (mod_r <= (v_tri(n) - 1) / 2);
+  if (igbts_activos==1)
+    Spr = (mod_r > 0) .* (mod_r >= (v_tri(n) + 1) / 2);
+    Snr = (mod_r < 0) .* (mod_r <= (v_tri(n) - 1) / 2);
 
-  Sps = (mod_s > 0) .* (mod_s >= (v_tri(n) + 1) / 2);
-  Sns = (mod_s < 0) .* (mod_s <= (v_tri(n) - 1) / 2);
+    Sps = (mod_s > 0) .* (mod_s >= (v_tri(n) + 1) / 2);
+    Sns = (mod_s < 0) .* (mod_s <= (v_tri(n) - 1) / 2);
 
-  Spt = (mod_t > 0) .* (mod_t >= (v_tri(n) + 1) / 2);
-  Snt = (mod_t < 0) .* (mod_t <= (v_tri(n) - 1) / 2);
+    Spt = (mod_t > 0) .* (mod_t >= (v_tri(n) + 1) / 2);
+    Snt = (mod_t < 0) .* (mod_t <= (v_tri(n) - 1) / 2);
 
-  % Tensiones instantáneas sintetizadas por el inversor (respecto al neutro
-  % del bus DC). En un puente NPC de tres niveles:
-  %   - (Spx-Snx)=+1 → +V0/2  (rama positiva conduce)
-  %   - (Spx-Snx)= 0 →   0     (estado de clamp al neutro)
-  %   - (Spx-Snx)=-1 → -V0/2  (rama negativa conduce)
-  % Se usa V0z1 (V0 de la muestra anterior) por simplicidad: el retraso de
-  % una muestra a 49 kHz es despreciable frente a la dinámica del bus.
-  vinv_r=(Spr-Snr)*V0z1/2;
-  vinv_s=(Sps-Sns)*V0z1/2;
-  vinv_t=(Spt-Snt)*V0z1/2;
+    % Tensiones instantáneas sintetizadas por el inversor (respecto al neutro
+    % del bus DC). En un puente NPC de tres niveles:
+    %   - (Spx-Snx)=+1 → +V0/2  (rama positiva conduce)
+    %   - (Spx-Snx)= 0 →   0     (estado de clamp al neutro)
+    %   - (Spx-Snx)=-1 → -V0/2  (rama negativa conduce)
+    % Se usa V0z1 (V0 de la muestra anterior) por simplicidad: el retraso de
+    % una muestra a 49 kHz es despreciable frente a la dinámica del bus.
+    vinv_r=(Spr-Snr)*V0z1/2;
+    vinv_s=(Sps-Sns)*V0z1/2;
+    vinv_t=(Spt-Snt)*V0z1/2;
+  else
+    % IGBTs bloqueados. PWM = 0. La tensión vinv_x queda determinada por
+    % los diodos free-wheeling según el signo de la corriente que viene
+    % de Lac (usamos la corriente de la muestra anterior, irz1):
+    %   - i_x > 0  → diodo de la rama negativa conduce → vinv_x = -V0/2
+    %   - i_x < 0  → diodo de la rama positiva conduce → vinv_x = +V0/2
+    %   - i_x = 0  → ambos cortados, vinv_x = 0
+    Spr=0; Snr=0; Sps=0; Sns=0; Spt=0; Snt=0;
+    if (irz1>0)
+      vinv_r=-V0z1/2;
+    elseif (irz1<0)
+      vinv_r=V0z1/2;
+    else
+      vinv_r=0;
+    endif
+    if (isz1>0)
+      vinv_s=-V0z1/2;
+    elseif (isz1<0)
+      vinv_s=V0z1/2;
+    else
+      vinv_s=0;
+    endif
+    if (itz1>0)
+      vinv_t=-V0z1/2;
+    elseif (itz1<0)
+      vinv_t=V0z1/2;
+    else
+      vinv_t=0;
+    endif
+  endif
 
   % Cálculo de las corrientes reales que pasan por el filtro Lac mediante
   % la dinámica del filtro inductivo, con corrección homopolar.
@@ -806,6 +1017,15 @@ while (n<=N)
   is_act=aLac*isz1+bLac*(vLs_act+vLsz1);
   it_act=aLac*itz1+bLac*(vLt_act+vLtz1);
 
+  % Si el disyuntor AC está abierto, las corrientes que pasan por Lac
+  % se fuerzan a 0. (Simplificación: no se modela el arco de corte del
+  % disyuntor; se asume corte limpio una vez completada la apertura).
+  if (disy_ac_cerrado==0)
+    ir_act=0;
+    is_act=0;
+    it_act=0;
+  endif
+
   % Almacenamiento de las corrientes medidas por los sensores AC.
   % El sensor está en el embarrado AC, después del filtro Lac y antes del
   % disyuntor. En la fase R, si hay arco AC, parte de la corriente que
@@ -825,19 +1045,35 @@ while (n<=N)
   % aporta el inversor a través de Lac, no el bus DC directamente).
   % El arco DC sí descarga el bus directamente: se suma a Idc como corriente
   % adicional que sale del bus por un camino paralelo a tierra/conductor.
-  idcpr=Spr*ir_act;
-  idcnr=Snr*ir_act;
-  idcr=idcpr+idcnr;
+  %
+  % Con IGBTs bloqueados, los diodos de libre circulación rectifican
+  % pasivamente la corriente de Lac. La contribución al bus DC es |i_x|
+  % (siempre positiva: la corriente "rectificada" carga Cdc).
+  if (igbts_activos==1)
+    idcpr=Spr*ir_act;
+    idcnr=Snr*ir_act;
+    idcr=idcpr+idcnr;
 
-  idcps=Sps*is_act;
-  idcns=Sns*is_act;
-  idcs=idcps+idcns;
+    idcps=Sps*is_act;
+    idcns=Sns*is_act;
+    idcs=idcps+idcns;
 
-  idcpt=Spt*it_act;
-  idcnt=Snt*it_act;
-  idct=idcpt+idcnt;
+    idcpt=Spt*it_act;
+    idcnt=Snt*it_act;
+    idct=idcpt+idcnt;
 
-  Idc=idcpr+idcps+idcpt+Iarcdc;
+    Idc=idcpr+idcps+idcpt+Iarcdc;
+  else
+    % Rectificador pasivo: cada fase aporta |i_x| al bus si pasa corriente.
+    % Si la corriente i_x>0, el diodo superior conduce (corriente sale del
+    % bus por la rama positiva). Si i_x<0, el diodo inferior conduce
+    % (corriente entra al bus por la rama negativa). En ambos casos, el
+    % bus pierde corriente positiva neta.
+    idcpr=0; idcnr=0; idcr=abs(ir_act);
+    idcps=0; idcns=0; idcs=abs(is_act);
+    idcpt=0; idcnt=0; idct=abs(it_act);
+    Idc=abs(ir_act)+abs(is_act)+abs(it_act)+Iarcdc;
+  endif
   idc(n)=Idc;
 
 
@@ -866,22 +1102,32 @@ while (n<=N)
   % el habitual en operación normal con Plim<=1). Si el Vpanel resultante
   % cae por debajo de Vmpptpanel, se recalcula con el tramo izquierdo.
 
-  H = V0z1 + Kbus*(Ipvz1 - Idcz1 - Idc);
+  if (disy_dc_cerrado==1)
+    H = V0z1 + Kbus*(Ipvz1 - Idcz1 - Idc);
 
-  % Tramo derecho: Vpanel en [Vmpptpanel, Vocpanel]
-  alpha = Npanelp*mR_panel/Npanels;
-  beta  = Npanelp*bR_panel;
-  Ipv_actual = (alpha*H + beta) / (1 - alpha*(Kbus + Rgen));
-  V0 = H + Kbus*Ipv_actual;
-  Vpanel = (V0 + Ipv_actual*Rgen)/Npanels;
-
-  if (Vpanel < Vmpptpanel)
-    % Tramo izquierdo: Vpanel en [0, Vmpptpanel]
-    alpha = Npanelp*mL_panel/Npanels;
-    beta  = Npanelp*bL_panel;
+    % Tramo derecho: Vpanel en [Vmpptpanel, Vocpanel]
+    alpha = Npanelp*mR_panel/Npanels;
+    beta  = Npanelp*bR_panel;
     Ipv_actual = (alpha*H + beta) / (1 - alpha*(Kbus + Rgen));
     V0 = H + Kbus*Ipv_actual;
     Vpanel = (V0 + Ipv_actual*Rgen)/Npanels;
+
+    if (Vpanel < Vmpptpanel)
+      % Tramo izquierdo: Vpanel en [0, Vmpptpanel]
+      alpha = Npanelp*mL_panel/Npanels;
+      beta  = Npanelp*bL_panel;
+      Ipv_actual = (alpha*H + beta) / (1 - alpha*(Kbus + Rgen));
+      V0 = H + Kbus*Ipv_actual;
+      Vpanel = (V0 + Ipv_actual*Rgen)/Npanels;
+    endif
+  else
+    % Disyuntor DC abierto: paneles desconectados del bus. Ipv=0 (no entra
+    % corriente al bus desde el campo). El bus queda con su propia dinámica
+    % Cdc·dV0/dt = -Idc, lo que en regla del trapecio da:
+    %   V0(n) = V0(n-1) + Kbus·(-Idc(n) - Idcz1)
+    Ipv_actual = 0;
+    V0 = V0z1 + Kbus*(-Idc - Idcz1);
+    Vpanel = Vocpanel;     % los paneles quedan en circuito abierto
   endif
 
   vdc(n)=V0;
@@ -904,12 +1150,28 @@ while (n<=N)
   vdcfz2=vdcfz1;
   vdcfz1=vdcmed(n);
 
+  % Filtrado adicional de Vdc para protecciones (cascada sobre vdcmed)
+  vdcprot(n)=vdcmed(n)*Bmed(1)+vdcprot_inz1*Bmed(2)+vdcprot_inz2*Bmed(3) ...
+            -vdcprot_fz1*Amed(2)-vdcprot_fz2*Amed(3);
+  vdcprot_inz2=vdcprot_inz1;
+  vdcprot_inz1=vdcmed(n);
+  vdcprot_fz2=vdcprot_fz1;
+  vdcprot_fz1=vdcprot(n);
+
   % Filtrado de medida Idc
   idcmed(n)=Idc*B(1)+idcinz1*B(2)+idcinz2*B(3)-idcfz1*A(2)-idcfz2*A(3);
   idcinz2=idcinz1;
   idcinz1=Idc;
   idcfz2=idcfz1;
   idcfz1=idcmed(n);
+
+  % Filtrado adicional de Idc para protecciones (cascada sobre idcmed)
+  idcprot(n)=idcmed(n)*Bmed(1)+idcprot_inz1*Bmed(2)+idcprot_inz2*Bmed(3) ...
+            -idcprot_fz1*Amed(2)-idcprot_fz2*Amed(3);
+  idcprot_inz2=idcprot_inz1;
+  idcprot_inz1=idcmed(n);
+  idcprot_fz2=idcprot_fz1;
+  idcprot_fz1=idcprot(n);
 
   % Filtrado de medidas Vac
   vrmed(n)=vacr(n)*B(1)+vrinz1*B(2)+vrinz2*B(3)-vrfz1*A(2)-vrfz2*A(3);
@@ -982,7 +1244,7 @@ while (n<=N)
   % 3) Índice de modulación M = 2·Vinvvac/V0, saturado a Mmax (sobremodulación).
   %    Si V0 cae por debajo de 2·Vinvvac/Mmax, el inversor satura.
   control=control+1;
-  if (control>=Ncontrol)
+  if (control>=Ncontrol && igbts_activos==1)
     control=0;
 
     % Feed-forward: delta requerido para entregar la potencia neta que sale
