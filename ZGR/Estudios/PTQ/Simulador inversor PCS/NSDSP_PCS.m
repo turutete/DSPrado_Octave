@@ -1,133 +1,131 @@
 ##
-## @file NSDSP_campofv.m
-## @brief Simulación de caída súbita de campo fotovoltaico en inversor de 4.5 MVA.
+## @file NSDSP_PCS.m
+## @brief Simulación de transitorios en PCS (Power Conversion System) de batería de 4.5 MVA.
 ##
-## Este script simula el comportamiento dinámico de un inversor fotovoltaico
-## trifásico de 4.5 MVA conectado a red, con el objetivo de analizar el
-## transitorio que se produce cuando el campo fotovoltaico sufre una caída
-## súbita de generación. La simulación trabaja muestra a muestra a 49 kHz, lo
-## que permite reproducir tanto la dinámica del bus DC (oscilaciones a 100/300
-## Hz, transitorios de carga del condensador) como el rizado de conmutación
-## debido al PWM a 2,45 kHz.
+## Este script simula el comportamiento dinámico de un inversor PCS (Power
+## Conversion System) trifásico de 4.5 MVA conectado a red, asociado a una
+## batería de 1500 V que puede operar tanto en descarga (potencia activa de
+## inversor a red) como en carga (potencia activa de red a batería). La
+## simulación trabaja muestra a muestra a 49 kHz, lo que permite reproducir
+## tanto la dinámica del bus DC (oscilaciones a 100/300 Hz, transitorios de
+## carga del condensador) como el rizado de conmutación debido al PWM a
+## 2,45 kHz.
 ##
 ## @section arquitectura Arquitectura modelada
-## El sistema se modela como un campo fotovoltaico (Npanels en serie x Npanelp
-## en paralelo) representado como una fuente de tensión Vpv con una resistencia
-## Rgen en serie. Esta fuente alimenta el bus DC (condensador Cdc), que a su
-## vez alimenta un puente trifásico NPC de tres niveles. La salida del puente pasa
-## por un filtro inductivo Lac que la conecta a la red trifásica de 690 V /
-## 50 Hz. La red se considera una fuente de tensión ideal (sin impedancia
+## El sistema se modela como una batería de tensión constante Vbat = 1500 V
+## conectada al bus DC a través de una resistencia serie equivalente Rgen
+## (cableado, contactos, ESR interna). El bus DC (condensador Cdc) alimenta
+## un puente trifásico NPC de tres niveles. La salida del puente pasa por un
+## filtro inductivo Lac que la conecta a la red trifásica de 690 V / 50 Hz.
+## La red se considera una fuente de tensión ideal (sin impedancia
 ## equivalente), a la que el inversor se sincroniza.
+##
+## La batería se modela como una fuente de tensión ideal: siempre cargada,
+## sin curva de descarga, sin limitación de corriente desde el modelo.
+## Cualquier limitación física (corriente máxima del BMS, etc.) queda fuera
+## del alcance de este simulador, salvo por el umbral de corriente inversa
+## que sí está vigilado por la protección DC.
 ##
 ## @section bloques Bloques principales del script
 ## @par 1. Parámetros del equipo y red.
 ## Frecuencia de muestreo (Fs), frecuencia de control PWM (Fcontrol), red
 ## (fred, Vffrmsred), nominales del inversor (Snom, Vdcnom), filtro de salida
-## (Lac), bus DC (Cdc), resistencias de modelo (Rgen, Rcorto), niveles
-## máximos (Vdcmax, Idcmax, Vacmax, Iacmax) al 120 % del nominal.
+## (Lac, RLac), bus DC (Cdc), resistencias de modelo (Rgen, Rcorto), niveles
+## máximos de protección al 120 % del nominal.
 ##
 ## @par 2. Consignas de potencia.
-## El inversor recibe Plim (límite de potencia activa, normalizado) y Qref
-## (consigna de reactiva, normalizada). Se aplica una limitación que garantiza
-## que la potencia aparente solicitada cumple S ≤ 1, ajustando Qref si es
-## necesario.
+## El inversor recibe Plim (consigna de potencia activa, normalizada y con
+## signo: positivo = descarga de batería hacia la red; negativo = carga de
+## batería desde la red) y Qref (consigna de reactiva, normalizada). Se
+## aplica una limitación que garantiza que la potencia aparente solicitada
+## cumple S ≤ 1, ajustando Qref si es necesario.
 ##
-## @par 3. Modelo del campo fotovoltaico.
-## Cada panel se modela mediante la función Idc_Panel_Modelo, que es una
-## aproximación lineal por tramos de la curva I-V: tramo izquierdo (de Iscpanel
-## a Impptpanel para Vdc en [0, Vmpptpanel]) y tramo derecho (de Impptpanel a 0
-## para Vdc en [Vmpptpanel, Vocpanel]).
+## @par 3. Modelo de la batería.
+## La batería se modela como una fuente de tensión ideal Vbat constante,
+## en serie con la resistencia Rgen. La corriente que aporta al bus es
+## Ipv = (Vbat - V0)/Rgen, donde V0 es la tensión instantánea del bus.
+## Esta corriente puede ser positiva (descarga) o negativa (carga).
 ##
-## @par 4. Búsqueda del punto de trabajo Vdc.
-## Si Plim = 1, el inversor opera en MPPT y la condición inicial es
-## (Vmpptpanel, Impptpanel). Si Plim < 1, se realiza una búsqueda iterativa
-## en la rama derecha de la curva P-V (Vmpptpanel a Vocpanel) hasta encontrar
-## el Vdc por panel que iguala la potencia generada con la demandada. Este Vdc
-## se generaliza al campo completo: Vpv = Vdc·Npanels e Ipv = Idcaux·Npanelp.
+## @par 4. Cálculo de magnitudes teóricas.
+## A partir de Plim y Qref se obtienen las consignas de corriente en
+## coordenadas dq:
+##   id_ref = (2/3)·Plim·Snom / Vfn_pico
+##   iq_ref = (2/3)·Qref·Snom / Vfn_pico
+## donde id es la componente en fase con la tensión de red (potencia activa)
+## y iq la componente en cuadratura (potencia reactiva).
 ##
-## @par 5. Cálculo de magnitudes teóricas.
-## A partir de Plim y Qref se obtiene la amplitud de pico de la corriente de
-## fase Im = (2/3)·S·Snom/(Vfn_pico) y su desfase respecto a la tensión de red
-## phi = atan(Qref/Plim). Por aplicación de Kirchhoff fasorial sobre Lac se
-## obtiene la amplitud de la tensión que debe sintetizar el inversor antes
-## del filtro, Vinvvac, y su desfase delta respecto a la tensión de red.
-## El índice de modulación es M = 2·Vinvvac/V0.
-##
-## @par 6. Generación de señales pre-bucle.
+## @par 5. Generación de señales pre-bucle.
 ## Se generan vectorialmente la triangular v_tri (a Fcontrol, en fase con el
 ## reloj de muestreo) y las tensiones de red vacr, vacs, vact (sinusoides a
 ## fred, sincronizadas a v_tri). Estas señales son fijas durante toda la
 ## simulación.
 ##
-## @par 7. Modelo dinámico del bus DC.
-## El campo fotovoltaico se modela como una fuente de corriente no lineal
-## gobernada por la curva I-V del panel: para cada tensión Vpanel a la que
-## se obliga al panel a trabajar, éste entrega la corriente Ipanel dictada
-## por su curva I-V. La rama serie-paralelo (Npanels x Npanelp) entrega una
-## corriente total Ipv = Ipanel·Npanelp a la tensión total Vpanel·Npanels.
+## @par 6. Modelo dinámico del bus DC.
+## El balance de corrientes en el nodo del bus es Cdc·dV0/dt = Ipv - Idc,
+## con Ipv = (Vbat - V0)/Rgen.
 ##
-## La conexión al bus es: campo PV ─ Rgen ─ bus DC (con Cdc), de manera que
-## la malla cumple Vpanel·Npanels = V0 + Ipv·Rgen y el balance de corrientes
-## en el nodo del bus es Cdc·dV0/dt = Ipv - Idc.
+## Sustituyendo y aplicando la transformación bilineal s = 2·Fs·(z-1)/(z+1)
+## se obtiene la regla del trapecio en forma cerrada:
+##   V0(n) = [V0(n-1)·(1 - Kbus/Rgen) + Kbus·(Vbat·2/Rgen - Idc(n) - Idc(n-1))
+##            + Kbus·(Vbat - V0(n-1))/Rgen]
+##           / (1 + Kbus/Rgen)
+## con Kbus = 1/(2·Fs·Cdc). De manera equivalente, se resuelve el sistema
+## acoplado V0-Ipv en forma cerrada en cada muestra.
 ##
-## Aplicando la transformación bilineal s = 2·Fs·(z-1)/(z+1) sobre la ecuación
-## del bus se obtiene la regla del trapecio:
-##   V0(n) = V0(n-1) + Kbus·[(Ipv(n) - Idc(n)) + (Ipv(n-1) - Idc(n-1))]
-## con Kbus = 1/(2·Fs·Cdc).
-##
-## En cada muestra se resuelve el sistema acoplado (regla del trapecio +
-## malla + curva I-V) en forma cerrada, eligiendo el tramo de la curva I-V
-## adecuado (izquierdo si Vpanel < Vmpptpanel, derecho en caso contrario).
-## Esto permite que la corriente Ipv responda dinámicamente a la tensión del
-## bus: cuando V0 supera Vmpptpanel·Npanels (operación con Plim<1), Ipv cae
-## de forma controlada hasta equilibrar la potencia demandada por el inversor.
+## @par 7. Control vectorial dq.
+## El control trabaja en coordenadas dq, con la tensión de red en eje d
+## y la fase θ = wred·t obtenida de la sincronización ideal a la red
+## (PLL ideal). El control tiene dos lazos PI independientes sobre id e iq,
+## diseñados por cancelación de polo del filtro Lac+RLac, con frecuencia
+## de corte fc_id = 300 Hz. Cada lazo incluye un término de feed-forward
+## que añade la tensión de red en d (Vfn_pico) y el desacoplo cruzado d-q
+## debido al filtro Lac:
+##   vd_inv = vd_pi + Vfn_pico - wred·Lac·iqmed
+##   vq_inv = vq_pi + wred·Lac·idmed
+## La salida del control en dq se transforma de vuelta a abc mediante la
+## Park inversa para generar las tensiones de referencia que el PWM debe
+## sintetizar. Las moduladoras son mod_x = 2·vinv_ref_x / V0 saturadas a
+## ±Mmax.
 ##
 ## @par 8. Bucle de simulación.
-## Para cada muestra n se calcula: las moduladoras (mod_r,s,t) con desfase
-## delta, las señales PWM (Spx, Snx por comparación con v_tri), las tensiones
-## instantáneas sintetizadas por cada fase del inversor (vinv_x = (Spx-Snx)·V0/2),
-## la tensión efectiva sobre Lac en cada fase (con corrección homopolar para
-## sistema sin neutro), las corrientes reales inyectadas a red (ir, is, it)
-## mediante la regla del trapecio sobre Lac·di/dt + RLac·i = vLx, las corrientes
-## del bus DC ponderadas por el PWM con las corrientes reales (idcpx = Spx·ix),
-## la corriente total del bus Idc, el sistema acoplado V0-Vpanel-Ipv mediante
-## resolución cerrada con selección de tramo de la curva I-V, las corrientes
-## del lado DC (ipv, idcin, icd) y, cada Ncontrol muestras, se actualizan
-## delta (mediante feed-forward de potencia + PI sobre V0 con anti-windup) y
-## M = 2·Vinvvac/V0 (saturado a Mmax).
+## Para cada muestra n se calcula: las señales PWM (Spx, Snx por comparación
+## con v_tri), las tensiones instantáneas sintetizadas por cada fase
+## (vinv_x = (Spx-Snx)·V0/2), la tensión efectiva sobre Lac en cada fase
+## (con corrección homopolar para sistema sin neutro), las corrientes
+## reales inyectadas a red (ir, is, it) mediante la regla del trapecio
+## sobre Lac·di/dt + RLac·i = vLx, las corrientes del bus DC ponderadas
+## por el PWM con las corrientes reales (idcpx = Spx·ix), la corriente
+## total del bus Idc, el balance del bus V0-Ipv en forma cerrada, las
+## corrientes del lado DC (ipv, idcin, icd) y, cada Ncontrol muestras,
+## se actualizan las moduladoras a partir del control vectorial dq.
 ##
 ## @section hipotesis Hipótesis del modelo
 ## - Sincronización ideal del inversor a la tensión de red (sin PLL real).
-## - Operación en zona lineal de modulación (M ≤ Mmax). Cuando M se satura,
-##   las corrientes reales calculadas dinámicamente reflejan el comportamiento
-##   del filtro Lac frente a la tensión sintetizada saturada y la red.
+##   La fase θ utilizada por las transformadas de Park se calcula
+##   directamente como θ(n) = wred·(n-1)/Fs.
+## - Batería como fuente de tensión ideal Vbat constante. No se modela la
+##   dinámica de descarga ni la curva SOC-V.
+## - Operación en zona lineal de modulación (|mod_x| ≤ Mmax). Cuando las
+##   moduladoras saturan, se congela el integrador del lazo correspondiente
+##   (anti-windup).
 ## - Tensión y frecuencia de red constantes y equilibradas. La red es una
 ##   fuente de tensión ideal sin impedancia equivalente.
 ## - Sistema sin hilo de neutro: las corrientes cumplen ir+is+it=0 mediante
 ##   la corrección homopolar vNN = (vinv_r+vinv_s+vinv_t)/3.
 ## - Filtro de salida con bobina Lac y resistencia parásita serie RLac, que
 ##   amortigua el modo resonante LC formado con Cdc.
-## - Control de bus DC mediante feed-forward de potencia + PI que ajusta
-##   delta para regular V0 a la consigna V0_ref = Vpv. El feed-forward
-##   calcula delta_ff = asin(2·wred·Lac·(P_pv - P_RLac) / (3·Vfn_pico·Vinvvac))
-##   para inyectar a la red exactamente la potencia que dan los paneles
-##   menos las pérdidas óhmicas reales en la bobina del filtro (estimadas
-##   con las corrientes instantáneas ir, is, it). El PI corrige pequeñas
-##   desviaciones. El control corre a Fcontrol = 2.45 kHz, con frecuencia
-##   de corte del lazo cerrado de 3 Hz, y delta saturado en ±π/4 con
-##   anti-windup por congelación del integrador.
-## - Paneles operando en condiciones (Su, T) constantes durante la simulación,
-##   fijadas antes del bucle. Pueden ser deterministas (Su=1, T=25 ºC con
-##   flag_aleatorio=0) o aleatorias dentro de rangos predefinidos
-##   (flag_aleatorio=1).
-## - Inversor ideal: sin pérdidas de conmutación, sin tiempo muerto, sin caída
-##   en los semiconductores.
+## - Control vectorial dq con dos lazos PI independientes sobre id e iq,
+##   diseñados por cancelación de polo: Kp = 2·π·fc_id·Lac y
+##   Ki = 2·π·fc_id·RLac, con fc_id = 300 Hz. Cadencia del control:
+##   Fcontrol = 2.45 kHz.
+## - Inversor ideal: sin pérdidas de conmutación, sin tiempo muerto, sin
+##   caída en los semiconductores.
 ##
 ## @section salidas Variables de salida principales
 ## Lado DC:
 ## - vdc(n)   : tensión instantánea del bus DC (V).
 ## - idc(n)   : corriente instantánea del bus DC hacia el puente (A).
-## - ipv(n)   : corriente entregada por el campo fotovoltaico (A).
+## - ipv(n)   : corriente entregada por la batería al bus (A; positiva = descarga).
 ## - idcin(n) : corriente que entra al bus a través de Rgen (A).
 ## - icd(n)   : corriente por el condensador del bus, icd = idcin - idc (A).
 ##
@@ -136,18 +134,20 @@
 ## - vacr(n), vacs(n), vact(n): tensiones de red de referencia (V).
 ##
 ## @section pendiente Funcionalidad pendiente de implementar
-## - Generación del evento de caída súbita de campo fotovoltaico (modificación
-##   dinámica de Vpv y/o Ipv durante la simulación).
+## - Generación del evento de variación súbita de consigna Plim/Qref durante
+##   la simulación.
 ## - Cálculo de las tensiones de fase a la salida del inversor antes de Lac
 ##   (vrn, vsn, vtn, ya pre-reservadas).
 ##
 ## @section protecciones Sistema de protecciones
-## El inversor incluye protecciones por sobretensión y sobrecorriente DC y AC,
-## y por corriente inversa DC (los paneles fotovoltaicos no aceptan corriente
-## negativa sostenida). El disparo se produce al cruzar uno cualquiera de
-## los umbrales sobre las señales filtradas para protección (vdcprot,
-## idcprot, irmed/ismed/itmed), registrando la muestra del disparo (n_trip)
-## y el motivo (motivo_trip).
+## El inversor incluye protecciones por sobretensión y sobrecorriente DC y
+## AC. En este caso, al ser una batería, sí es legítima la corriente inversa
+## (modo carga), por lo que el umbral de corriente inversa se relaja al
+## mismo valor que el umbral de sobrecorriente directa: Idc_inv_max =
+## -Idcmax. El disparo se produce al cruzar uno cualquiera de los umbrales
+## sobre las señales filtradas para protección (vdcprot, idcprot,
+## irmed/ismed/itmed), registrando la muestra del disparo (n_trip) y el
+## motivo (motivo_trip).
 ##
 ## Las señales del bus DC (vdc, idc) llevan un filtro adicional elíptico
 ## de orden 2 a Fmed=10 Hz, aplicado en cascada sobre el filtro de medida
@@ -167,8 +167,8 @@
 ##      corriente residual del filtro Lac, devolviéndola al bus DC.
 ##   2) Apertura del disyuntor AC (Tabre_ac después del trip): las corrientes
 ##      del filtro se fuerzan a 0.
-##   3) Apertura del disyuntor DC (Tabre_dc después del trip): los paneles
-##      se desconectan del bus, Ipv=0, y el bus queda con su dinámica natural
+##   3) Apertura del disyuntor DC (Tabre_dc después del trip): la batería
+##      se desconecta del bus, Ipv=0, y el bus queda con su dinámica natural
 ##      Cdc·dV0/dt = -Idc.
 ## Los tiempos de apertura son parametrizables (rangos min-max) y pueden
 ## tomarse aleatorios en cada simulación cuando flag_aleatorio=1. La
@@ -176,7 +176,7 @@
 ## post-disparo.
 ##
 ## @author Dr. Carlos Romero Pérez
-## @date Creación: 25/04/2026
+## @date Creación: 31/05/2026
 ## @date Última modificación: 31/05/2026
 ##
 
@@ -187,7 +187,7 @@
 ## @var Fs        Frecuencia de muestreo de las señales analógicas (Hz).
 ## @var Fcontrol  Frecuencia portadora del PWM, igual a la frecuencia de la
 ##                triangular y a la cadencia de actualización del control (Hz).
-## @var Ncontrol  Número de muestras entre actualizaciones de M, round(Fs/Fcontrol).
+## @var Ncontrol  Número de muestras entre actualizaciones del control, round(Fs/Fcontrol).
 ## @var fred      Frecuencia de la red eléctrica (Hz).
 ## @var wred      Pulsación de la red, 2·pi·fred (rad/s).
 ## @var N         Número total de muestras de la simulación.
@@ -202,13 +202,13 @@
 ## @var Lac       Inductancia del filtro inductivo de salida del inversor (H).
 ## @var RLac      Resistencia parásita serie de Lac (ohm).
 ## @var Cdc       Capacidad del condensador del bus DC (F).
-## @var Rgen      Resistencia serie equivalente entre paneles y bus DC (ohm).
+## @var Rgen      Resistencia serie equivalente entre batería y bus DC (ohm).
 ## @var Rcorto    Resistencia de cortocircuito del bus (ohm).
 ##
-## @par Umbrales de protección (al 120 % del nominal)
+## @par Umbrales de protección (al 120 % del nominal salvo corriente inversa)
 ## @var Vdcmax    Umbral de sobretensión DC del equipo (V).
 ## @var Idcmax    Umbral de sobrecorriente DC del equipo (A).
-## @var Idc_inv_max Umbral de corriente inversa DC, -10 % de Idcnom (A).
+## @var Idc_inv_max Umbral de corriente inversa DC, -Idcmax (A).
 ## @var Vacmax    Umbral de sobretensión AC del equipo, en pico (V).
 ## @var Iacmax    Umbral de sobrecorriente AC del equipo, en pico (A).
 ##
@@ -234,72 +234,45 @@
 ## @var disy_dc_cerrado_v Vector con el estado del disyuntor DC por muestra.
 ## @var disy_ac_cerrado_v Vector con el estado del disyuntor AC por muestra.
 ##
-## @par Modelo del campo fotovoltaico
-## @var Iscpanel    Corriente de cortocircuito de un panel (A).
-## @var Vocpanel    Tensión de circuito abierto de un panel (V).
-## @var Vmpptpanel  Tensión del punto de máxima potencia de un panel (V).
-## @var Impptpanel  Corriente del punto de máxima potencia de un panel (A).
-## @var alfa_isc    Coeficiente de temperatura de Isc (no utilizado en el modelo lineal actual).
-## @var beta_vosc   Coeficiente de temperatura de Voc (no utilizado en el modelo lineal actual).
-## @var Ns          Número de células en serie por panel (información, no usado).
-## @var Np          Número de ramas paralelo dentro del panel (información, no usado).
-## @var Npanels     Número de paneles en serie por rama, round(Vdcnom/Vmpptpanel).
-## @var Npanelp     Número de ramas paralelo del campo, round(Idcnom/Impptpanel).
-## @var Su          Irradiancia normalizada (1 = STC). Constante en esta versión.
-## @var T           Temperatura de célula (°C). Constante en esta versión.
+## @par Modelo de la batería
+## @var Vbat      Tensión de la batería en bornes (V).
 ##
 ## @par Consignas y punto de trabajo
-## @var Plim     Consigna de límite de potencia activa, normalizada [0, 1].
+## @var Plim     Consigna de potencia activa, normalizada y con signo [-1, 1].
+##               Positivo = descarga (batería → red); negativo = carga (red → batería).
 ## @var Qref     Consigna de potencia reactiva, normalizada y con signo.
 ## @var Sref     Consigna de potencia aparente, sqrt(Plim^2 + Qref^2).
-## @var Vpv      Tensión del campo fotovoltaico en el punto de trabajo (V).
-## @var Ipv      Corriente del campo fotovoltaico en el punto de trabajo (A).
-## @var Vdc      Tensión por panel en el punto de trabajo (V).
-## @var Idcaux   Corriente por panel en el punto de trabajo (A).
-## @var Pdcobj   Potencia objetivo por panel para la búsqueda iterativa (W).
-## @var dVdc     Paso relativo de la búsqueda iterativa de Vdc.
-## @var dPdcmin  Mínimo error de potencia encontrado durante la búsqueda (W).
-## @var flag_Pdc Bandera de fin de la búsqueda iterativa de Vdc.
 ##
-## @par Magnitudes de control AC
-## @var Im       Amplitud de pico de la corriente de fase inyectada (A).
-## @var phi      Desfase de la corriente respecto a la tensión de red (rad).
-## @var Vinvvac  Amplitud de la tensión de fase a sintetizar antes del filtro Lac (V).
-## @var delta    Desfase de la tensión sintetizada por el inversor respecto a la red (rad).
-## @var delta_inicial  Valor inicial de delta (resultado del balance fasorial).
-## @var M        Índice de modulación PWM, M = 2·Vinvvac/V0.
+## @par Magnitudes de control AC en dq
+## @var id_ref    Consigna de corriente activa (eje d), (2/3)·Plim·Snom/Vfn_pico (A).
+## @var iq_ref    Consigna de corriente reactiva (eje q), (2/3)·Qref·Snom/Vfn_pico (A).
+## @var theta     Fase de la tensión de red, wred·(n-1)/Fs (rad).
+## @var idmed     Corriente activa medida en eje d (A).
+## @var iqmed     Corriente reactiva medida en eje q (A).
+## @var err_id    Error en eje d, id_ref - idmed (A).
+## @var err_iq    Error en eje q, iq_ref - iqmed (A).
+## @var vd_pi     Salida del PI en eje d (V).
+## @var vq_pi     Salida del PI en eje q (V).
+## @var vd_inv    Tensión de referencia en eje d, con feed-forward y desacoplo (V).
+## @var vq_inv    Tensión de referencia en eje q, con feed-forward y desacoplo (V).
+## @var vinv_ref_r, vinv_ref_s, vinv_ref_t   Tensiones de referencia abc para el PWM (V).
 ## @var Mmax     Índice de modulación máximo permitido (sobremodulación).
-## @var control  Contador interno para disparar la actualización de M cada Ncontrol muestras.
+## @var control  Contador interno para disparar la actualización del control cada Ncontrol muestras.
 ##
-## @par Control PI del bus DC
-## @var V0_ref     Consigna de tensión del bus DC para el PI (V).
-## @var Ts_ctrl    Periodo de muestreo del control, Ncontrol/Fs (s).
-## @var fc_PI      Frecuencia de corte del lazo cerrado del PI (Hz).
-## @var Kp_PI      Ganancia proporcional del PI (rad/V).
-## @var Ki_PI      Ganancia integral del PI (rad/(V·s)).
-## @var Kp_pot     Ganancia proporcional equivalente en potencia (W/V).
-## @var dPac_ddelta  Sensibilidad potencia activa - delta (W/rad).
-## @var delta_max  Saturación superior de delta (rad).
-## @var delta_min  Saturación inferior de delta (rad).
-## @var PI_int     Estado del integrador del PI (rad).
-## @var err_V0     Error de tensión del bus, V0 - V0_ref (V).
-## @var P_pv       Potencia DC instantánea de los paneles, V0·Ipv (W).
-## @var P_RLac     Pérdidas óhmicas instantáneas en la bobina del filtro, RLac·(ir²+is²+it²) (W).
-## @var P_ac_obj   Potencia activa objetivo a entregar a la red, P_pv - P_RLac (W).
-## @var sin_arg    Argumento del asin para el feed-forward, saturado en [-1,1].
-## @var delta_ff   Desfase de feed-forward para inyectar P_ac_obj (rad).
+## @par Diseño del control PI en dq (cancelación de polo Lac+RLac)
+## @var Ts_ctrl   Periodo de muestreo del control, Ncontrol/Fs (s).
+## @var fc_id     Frecuencia de corte del lazo cerrado de corriente (Hz).
+## @var Kp_id     Ganancia proporcional del PI de corriente, 2·π·fc_id·Lac (V/A).
+## @var Ki_id     Ganancia integral del PI de corriente, 2·π·fc_id·RLac (V/(A·s)).
+## @var PI_int_d  Estado del integrador del PI en eje d (V).
+## @var PI_int_q  Estado del integrador del PI en eje q (V).
 ##
-## @par Coeficientes del filtro discreto del bus DC y del modelo de panel
+## @par Coeficientes del filtro discreto del bus DC
 ## @var Kbus      Coeficiente de la regla del trapecio del bus, 1/(2·Fs·Cdc).
 ## @var aLac      Coeficiente recursivo del filtro Lac (con RLac), (2·Fs·Lac-RLac)/(2·Fs·Lac+RLac).
 ## @var bLac      Coeficiente de entrada del filtro Lac, 1/(2·Fs·Lac+RLac).
-## @var mL_panel  Pendiente del tramo izquierdo de la curva I-V del panel.
-## @var bL_panel  Ordenada en el origen del tramo izquierdo de la curva I-V.
-## @var mR_panel  Pendiente del tramo derecho de la curva I-V del panel.
-## @var bR_panel  Ordenada en el origen del tramo derecho de la curva I-V.
-## @var V0        Tensión instantánea del bus DC, valor actual del filtro (V).
-## @var Vpanel    Tensión instantánea por panel resultante del balance (V).
-## @var Ipv_actual Corriente instantánea total del campo PV (A).
+## @var V0        Tensión instantánea del bus DC, valor actual (V).
+## @var Ipv_actual Corriente instantánea que entrega la batería al bus (A).
 ## @var V0z1      Retardo z^-1 de V0 (V).
 ## @var Ipvz1     Retardo z^-1 de Ipv (A).
 ## @var Idcz1     Retardo z^-1 de Idc (A).
@@ -326,7 +299,7 @@
 ## @par Señales de salida (vectores de longitud N)
 ## @var vdc    Tensión instantánea del bus DC (V).
 ## @var idc    Corriente instantánea del bus DC hacia el puente (A).
-## @var ipv    Corriente entregada por el campo fotovoltaico (A).
+## @var ipv    Corriente entregada por la batería al bus (A).
 ## @var idcin  Corriente instantánea que entra al bus a través de Rgen (A).
 ## @var icd    Corriente por el condensador del bus, idcin - idc (A).
 ## @var ir, is, it  Corrientes medidas por los sensores AC en cada fase, después del filtro Lac (A).
@@ -337,7 +310,7 @@
 
 pkg load signal;
 
-flag_tipo_arco= menu("CASO DE USO","DC","AC","ESTABLE","SAG","SWELL","SPIKE","OSCILLATORY","NOTCH","HARMONIC","FLICKER");
+flag_tipo_arco= menu("CASO DE USO","DC","AC","ESTABLE");
 
 flag_tipo_arco=flag_tipo_arco-1;
 
@@ -349,7 +322,7 @@ Fs=49000 ;                        % Frecuencia de muestreo de las señales anal�
 Fcontrol=2450;                    % Frecuencia de control
 fred=50;                          % Frecuencia de la red eléctrica en Hz
 wred=2*pi*fred;
-N=120000;                         % Número de muestras de la simulación
+N=150000;                          % Número de muestras de la simulación
 Vdcnom=1500;                      % Tensión nominal del bus DC en V
 Vffrmsred=690;                    % Tensión RMS fase fase
 Vfnrmsred=Vffrmsred/sqrt(3);      % Tensión RMS de red fase neutro
@@ -360,7 +333,6 @@ Cdc=53e-3;                        % Condensador del bus DC en F
 Rcorto=0.001;                     % Resistencia de cortocircuito
 Rgen=0.001;                       % Resistencia en serie de la fuente de corriente
 Mmax=1.15;                        % Índice de modulación máximo (sobremodulación)
-Tref=25;                          % Temperatura de referencia de los paneles
 
 % Filtro LP para medidas de tensiones y corrientes
 Fp=100;                          % Frecuencia de paso.
@@ -438,6 +410,11 @@ itinz2=0;
 vdcprot_fz1=0; vdcprot_fz2=0; vdcprot_inz1=0; vdcprot_inz2=0;
 idcprot_fz1=0; idcprot_fz2=0; idcprot_inz1=0; idcprot_inz2=0;
 
+% Retardos del filtro paso-bajo sobre las componentes dq (predeclaración).
+% Se reinicializan después en régimen permanente.
+idmedfz1=0; idmedfz2=0; idmedinz1=0; idmedinz2=0;
+iqmedfz1=0; iqmedfz2=0; iqmedinz1=0; iqmedinz2=0;
+
 
 # Consignas para casos de uso
 Plim=1;
@@ -448,20 +425,14 @@ if ((Plim^2+Qref^2)>1)
   Qref=sign(Qref)*sqrt(1-Plim^2);
 endif
 
-# Este código define la irradiancia y la temperatura en la planta.
-# Según se haya seleccionado usar o no aleatoriedad, se usa unos valores de
-# irradiancia Su=1 y T=25ºC, o se escoge cierta aleatoriedad cada vez que se
-# ejecuta el script
+# Definición del instante del evento (inicio del arco o de la perturbación).
+# Con flag_aleatorio=0 se fija en N/2. Con flag_aleatorio=1 se toma aleatorio
+# dentro del primer cuarto de la simulación.
 
 if (flag_aleatorio==0)
-  % Condiciones ambientales
-  Su=1;
-  T=Tref;
   indarc=floor(N/2);    % El arco se inicia en la mitad de la simulación
   indeven=floor(N/2);   % Muestra en la que se produce el evento no arco
 else
-  Su=0.5+0.5*rand(1);    % Irradiancia por unidad S/Sref [0.5 - 1]
-  T=Tref+15*(1-rand(1));   % Temperatura en ºC [25 - 40]
   indarc=floor(N/4+1/2*randn(1));   % El arco se inicia en algún punto [N/4 3N/4]
   indeven=floor(N/4+1/2*randn(1));  % El evento no arco se inicia en algún punto [N/4 3N/4]
 endif
@@ -471,7 +442,7 @@ endif
 Idcnom=Snom/Vdcnom;
 Vdcmax=Vdcnom*1.2;                % Umbral de sobretensión DC del equipo
 Idcmax=Snom/Vdcnom*1.2;           % Umbral de sobrecorriente DC del equipo
-Idc_inv_max=-0.1*Idcnom;          % Umbral de corriente inversa DC (PV no acepta corriente negativa sostenida)
+Idc_inv_max=-Idcmax;              % Umbral de corriente inversa DC. En batería el modo carga (Idc<0) es legítimo, hasta -Idcmax.
 
 Iacmax=2*(Snom/3)/(Vfnrmsred*sqrt(2))*1.2;    % Umbral de sobrecorriente AC del equipo
 Vacmax=Vfnrmsred*sqrt(2)*1.2;                 % Umbral de sobretensión AC del equipo
@@ -509,54 +480,17 @@ igbts_activos=1;                  % 1=IGBTs operativos, 0=bloqueados
 disy_dc_cerrado=1;                % 1=disyuntor DC cerrado, 0=abierto
 disy_ac_cerrado=1;                % 1=disyuntor AC cerrado, 0=abierto
 
-% Modelo de panel PV
-Np=1;
-Ns=60;
-Iscpanel_25=8.85;
-Vocpanel_25=37.85;
-alfa_isc=0.062;
-beta_vosc=-0.33;
-gamma_vosc=0.05;
-epsilom_vosc=10e-5;
-Vmpptpanel_25=30.12;
-Impptpanel_25=8.3;
-Rs=0.01;        % Resistencia serie de celda [ohms]
-Npanels=round(Vdcnom/Vmpptpanel_25);
-Npanelp=round(Idcnom/Impptpanel_25);
-
-% Efecto de Su y T
-Iscpanel=Iscpanel_25*Su*(1+alfa_isc*(T-Tref));
-Vocpanel=(Vocpanel_25+beta_vosc*(T-Tref))*(1+gamma_vosc*log(Su+epsilom_vosc));
-Impptpanel=Impptpanel_25*Su*(1+alfa_isc*(T-Tref));
-Vmpptpanel=Vmpptpanel_25+beta_vosc*(T-Tref)+Rs*(Impptpanel_25-Impptpanel);;
-
-% Filtro Tensión de bus Corto circuito bus V0
-B1corto=1/(Cdc*Fs);
-A1corto=(B1corto/Rcorto-1);
-xincortoz1=Vdcnom;
-youtcortoz1=0;
+% Modelo de la batería
+Vbat=1500;                        % Tensión de batería en bornes (V), constante
 
 % Filtro V0=f(Ipv,Idc,Cdc) - Regla del trapecio (bilineal de un integrador)
-% Ecuación: Cdc·dV0/dt = Ipv - Idc
+% Ecuación: Cdc·dV0/dt = Ipv - Idc, con Ipv = (Vbat - V0)/Rgen
 % V0(n) = V0(n-1) + Kbus·[(Ipv(n)-Idc(n)) + (Ipv(n-1)-Idc(n-1))]
 Kbus=1/(2*Fs*Cdc);
-
-% Coeficientes precalculados de la curva I-V del panel (lineal por tramos)
-% Tramo izquierdo (Vpanel en [0, Vmpptpanel]):
-%   Ipanel = mL·Vpanel + bL
-mL_panel=(Impptpanel-Iscpanel)/Vmpptpanel;
-bL_panel=Iscpanel;
-% Tramo derecho (Vpanel en [Vmpptpanel, Vocpanel]):
-%   Ipanel = mR·Vpanel + bR
-mR_panel=Impptpanel/(Vmpptpanel-Vocpanel);
-bR_panel=Impptpanel-mR_panel*Vmpptpanel;
 
 
 % Simulador
 n=1;                  % Índice temporal (t=n/Fs)
-flag_Pdc=0;           % Se usa en el cálculo de Vdc de trabajo
-dVdc=0.001;           % Intervalo de búsqueda de Vdc
-dPdcmin=100;          % Valor inicial alto para primer punto de búsqueda
 Ncontrol=round(Fs/Fcontrol);
 control=0;            % Contador para lanzar el control
 
@@ -566,7 +500,7 @@ vacs=[];               % Forma de onda teórica de la tensión de salida S
 vact=[];               % Forma de onda teórica de la tensión de salida T
 
 
-ipv=[];                 % Corriente de salida de paneles
+ipv=[];                 % Corriente entregada por la batería al bus
 idc=[];                 % Corriente del bus DC
 vdc=[];                 % Tensión del bus DC
 idcin=[];               % Corriente de PV o Batería
@@ -601,10 +535,6 @@ itmed=[];
 vdcprot=[];
 idcprot=[];
 
-M_vector=[];        % Vector de índices de modulación
-errV0_vect=[];      % Vector del error del PI de Vdc
-r=1;                % ïndice del vector M_vector a la frecuencia Fcontrol
-
 
 % Generamos las tensiones AC.
 %
@@ -612,128 +542,41 @@ r=1;                % ïndice del vector M_vector a la frecuencia Fcontrol
 % a ella.
 %
 q=1:N;
-vtriaux=Three_Phase(Vfnrmsred*sqrt(2),fred,0,N,Fs);
+vacr(q)=Vfnrmsred*sqrt(2)*cos(wred*(q-1)/Fs);
+vacs(q)=Vfnrmsred*sqrt(2)*cos(wred*(q-1)/Fs-2*pi/3);
+vact(q)=Vfnrmsred*sqrt(2)*cos(wred*(q-1)/Fs+2*pi/3);
 
-if (flag_tipo_arco<3)
-  vtrif=vtriaux;
-endif
-
-if (flag_tipo_arco==3)
-  % Hueco AC
-  vtrif=Sag_Transient(vtriaux,Fs,0.05,indeven/Fs,(indeven/Fs+0.05));
-endif
-
-if (flag_tipo_arco==4)
-  % Sobretensión AC
-  vtrif=Swell_Transient(vtriaux,Fs,1.02,indeven/Fs,(indeven/Fs+0.1));
-endif
-
-if (flag_tipo_arco==5)
-  % Spike AC
-  vtrif=Spike_Transient(vtriaux,Fs,[1.5 1.5 1.5],indeven/Fs);
-endif
-
-if (flag_tipo_arco==6)
-  % Oscilatorio
-  vtrif=Oscillatory_Transient(vtriaux,Fs,3500,[1;0;0],0.1,0.5,0.25,1,indeven/Fs);
-endif
-
-if (flag_tipo_arco==7)
-  % Notch_Transient
-  vtrif=Notch_Transient(vtriaux,Fs,[1 1 1],1,0.003,indeven/Fs);
-endif
-
-if (flag_tipo_arco==8)
-  vtrif=Harmonics_Transient(vtriaux, Fs,[0.1 0 0.01],indeven/Fs,N/Fs);
-endif
-
-if (flag_tipo_arco==9)
-  vtrif=Flicker_Transient(vtriaux, Fs, 1,0.015,indeven/Fs, N/Fs);
-endif
-
-
-
-vacr=vtrif(1,:);
-vacs=vtrif(2,:);
-vact=vtrif(3,:);
-
-
-% En esta simulación, Plim y Qref no varían. Son las consignas que piden
-% la eléctrica a la planta.
-%
-% En primer lugar, se comprueba si el límite de potencia Plim que piden es 1 o
-% menor que 1.
-% Si es 1, piden la máxima potencia, por lo que hay que trabajar en mppt.
-% Si es menor, el algoritmo de control del inversor calcula cuál debe ser
-% el valor del bus DC que haga que la potencia generada por los paneles
-% sea igual a la potencia demandada, evitando así que la tensión del bus
-% aumente y llegue a una sobretensión de ruptura
-if (Plim<1)
-  Vdc=Vmpptpanel;
-  Pdcobj=Plim*Snom/(Npanels*Npanelp);     % Potencia objetivo por panel individual
-
-  while (flag_Pdc==0)
-    % Usamos la función Idc_Panel_Modelo para calcular la corriente del panel para
-    % cada uno de los valores de Vdc que vamos a analizar.
-    % Vdc tomará valores en el intervalo [Vmpptpanel Vocpanel], recorriéndolo
-    % en sentido creciente. Deben ser incrementos pequeños, ya que la curva
-    % decrece a 0 muy rápidamente
-    Vdc=Vdc*(1+dVdc);
-    if (Vdc>=Vocpanel)
-      Vdc=Vocpanel;
-      flag_Pdc=1;             % Alcanzada la tensión de circuito abierto del panel
-    endif
-
-    %Idcaux=Idc_Panel(Vdc,Su,T,Iscpanel,Vocpanel,Vmpptpanel,Impptpanel,Ns,Np,alfa_isc,beta_vosc);
-    Idcaux=Idc_Panel_Modelo(Vdc,Iscpanel,Vocpanel, Vmpptpanel, Impptpanel);
-    Pdaux=Vdc*Idcaux;
-    if (abs(Pdaux-Pdcobj)<dPdcmin)
-      dPdcmin=abs(Pdaux-Pdcobj);
-    else
-      flag_Pdc=1;               % Encontrado el valor de Vdc que hace Ppanel=Plim
-    endif
-  endwhile
-else
-  % Si Plim=1, se trabaja en Mppt
-  Vdc=Vmpptpanel;
-  %Idcaux=Idc_Panel(Vdc,Su,T,Iscpanel,Vocpanel,Vmpptpanel,Impptpanel,Ns,Np,alfa_isc,beta_vosc);
-  Idcaux=Idc_Panel_Modelo(Vdc,Iscpanel,Vocpanel, Vmpptpanel, Impptpanel);
-endif
-
-
-% En este punto conocemos Idcpanel e Vdcpanel que hacen que Ppv=Plimt
-% Lo generalizamos a los Npanelp en paralelo y Npanels y obtenmos Vdc, Idc de trabajo
-Vpv=Vdc*Npanels;
-Ipv=Idcaux*Npanelp;
-
-% Modelo de dependencia de Vbus de (ipv-idc)
-% Lo inicializamos al iniciar la simulación, cuando ya sabemos el valor
-% inicial de Vdc
-Kdc=1/(Cdc*Fs);
-Adcz1=Vpv;    % Valor inicial del retraso y(n-1) del filtro LP para n=0
+% En este caso de batería, el punto de trabajo es trivial:
+%   Ipv en régimen permanente = potencia activa entregada / V0
+% En el arranque, asumimos que el bus está cargado a Vbat (sin corriente
+% circulando todavía), por lo que V0_inicial = Vbat e Ipv_inicial = 0.
+% Durante el control, el bus se desplaza ligeramente respecto a Vbat según
+% la corriente que esté circulando: V0 = Vbat - Ipv·Rgen.
+Vpv=Vbat;
+Ipv=0;
 
 
 Sref=sqrt(Plim^2+Qref^2);
 
-% Conocida la potencia aparente demandada, podemos calcular la corriente AC
-% de salida que hay que generar, ya que la tensión de red es conocida y no
-% depende de la dinámica interna del inversor.
+% Conocida la potencia aparente demandada, calculamos las consignas de
+% corriente en coordenadas dq y la corriente de fase teórica que
+% inyectará el inversor en régimen permanente.
 %
-% Llamamos a la amplitud de las corrientes de fase Im.
+% id_ref es la componente activa (eje d, en fase con la tensión de red),
+% iq_ref es la componente reactiva (eje q, en cuadratura). Plim positivo
+% = descarga (corriente saliendo del inversor hacia la red), Plim negativo
+% = carga (corriente entrando al inversor desde la red).
 %
-% El desfase de Ir, Is, It respecto También conocemos el desfase solicitado
-%
-% Im=2/3* Sref/(Vfnrmsred*sqrt(2))
-%
-% Conocido Im y phi, podremos generar la forma de onda de ir(t), is(t) e it(t)
-%
-% ir(t)=Im*cos(wred t + phi)
-% is(t)=Im*cos(wred t + phi -2pi/3)
-% it(t)=Im*cos(wred t + phi +2pi/3)
-%
+% La amplitud Im y el desfase phi de la corriente trifásica en régimen
+% permanente se obtienen de id_ref e iq_ref:
+%   Im = sqrt(id_ref^2 + iq_ref^2)
+%   phi = atan2(iq_ref, id_ref)
+% Con la convención de ir(t) = Im·cos(wred·t + phi).
 
-Im=2/3*Sref*Snom/(Vfnrmsred*sqrt(2));
-phi=atan(Qref/Plim);
+id_ref = (2/3)*Plim*Snom/(Vfnrmsred*sqrt(2));
+iq_ref = (2/3)*Qref*Snom/(Vfnrmsred*sqrt(2));
+Im     = sqrt(id_ref^2 + iq_ref^2);
+phi    = atan2(iq_ref, id_ref);
 
 % Reinicialización de los retardos de los filtros de medida en régimen
 % permanente teórico. Esto evita un transitorio inicial del filtro elíptico
@@ -747,8 +590,8 @@ phi=atan(Qref/Plim);
 vdcfz1=Vpv; vdcfz2=Vpv; vdcinz1=Vpv; vdcinz2=Vpv;
 
 % Filtro Idc (señal DC, valor inicial: Ipv en régimen permanente)
-% Ipv inicial = (Vpv·Npanelp/Npanels) en MPPT, equivalente a Snom*Sref/Vpv
-Ipv_init=Sref*Snom/Vpv;
+% Ipv inicial = potencia activa entregada / Vpv = Plim·Snom / Vbat
+Ipv_init=Plim*Snom/Vpv;
 idcfz1=Ipv_init; idcfz2=Ipv_init; idcinz1=Ipv_init; idcinz2=Ipv_init;
 
 % Filtros Vac (tensiones de red sinusoidales con fase 0, -2π/3, +2π/3)
@@ -776,48 +619,36 @@ vdcprot_inz1=Vpv;       vdcprot_inz2=Vpv;
 idcprot_fz1=Ipv_init;   idcprot_fz2=Ipv_init;
 idcprot_inz1=Ipv_init;  idcprot_inz2=Ipv_init;
 
-% Cálculo de la tensión que debe sintetizar el inversor antes del filtro Lac.
-%
-% Por Kirchhoff fasorial sobre la rama serie RLac + j·wred·Lac (con la red
-% a fase 0 como referencia, y la corriente Iac = Im·exp(j·phi) — phi
-% positivo = capacitivo, corriente adelantada):
-%
-%   Vinv = Vred + (RLac + j·wred·Lac)·Iac
-%        = Vfn_pico + (RLac + j·wred·Lac)·(Im·cos(phi) + j·Im·sin(phi))
-%        = (Vfn_pico + RLac·Im·cos(phi) - wred·Lac·Im·sin(phi))
-%          + j·(RLac·Im·sin(phi) + wred·Lac·Im·cos(phi))
-%
-% Vinvvac es el módulo de Vinv (amplitud de la tensión que el inversor debe
-% sintetizar) y delta es su fase respecto a la tensión de red. El control
-% del inversor utiliza ambas magnitudes: Vinvvac fija el índice de modulación
-% M = 2·Vinvvac/V0, y delta fija el desfase de las moduladoras respecto a
-% la tensión de red. delta_inicial se usa solo para inicializar delta antes
-% del bucle; dentro del bucle, el control combina feed-forward con PI.
+% Retardos del filtro paso-bajo sobre las componentes dq (idmed, iqmed).
+% La Park se aplica sobre las corrientes sin filtrar (ir(n), is(n), it(n));
+% el filtrado se hace después de la transformación para no perder magnitud
+% ni fase de la fundamental a 50 Hz. Reutilizamos los coeficientes [B,A]
+% del filtro elíptico de medida (Fp=100 Hz), válido aquí porque las
+% componentes en dq son DC en régimen permanente.
+% Inicialización en régimen permanente: idmed≈id_ref, iqmed≈iq_ref.
+idmedfz1=id_ref;  idmedfz2=id_ref;
+idmedinz1=id_ref; idmedinz2=id_ref;
+iqmedfz1=iq_ref;  iqmedfz2=iq_ref;
+iqmedinz1=iq_ref; iqmedinz2=iq_ref;
 
-Vinv_re = Vfnrmsred*sqrt(2) + RLac*Im*cos(phi) - wred*Lac*Im*sin(phi);
-Vinv_im = RLac*Im*sin(phi) + wred*Lac*Im*cos(phi);
+% Tensión teórica que sintetiza el inversor antes del filtro Lac.
+%
+% Por Kirchhoff fasorial sobre la rama RLac + j·wred·Lac:
+%   Vinv = Vred + (RLac + j·wred·Lac)·Iac
+% con Iac = id_ref + j·iq_ref expresado en el referencial de la red. El
+% módulo Vinvvac es la amplitud teórica de la tensión que el inversor
+% debe sintetizar; sirve para verificación y para inicialización de los
+% retardos del filtro Lac. La fase delta no se utiliza en el control
+% vectorial (la fase de las moduladoras se obtiene de la Park inversa).
+Vinv_re = Vfnrmsred*sqrt(2) + RLac*id_ref - wred*Lac*iq_ref;
+Vinv_im =                      RLac*iq_ref + wred*Lac*id_ref;
 Vinvvac = sqrt(Vinv_re^2 + Vinv_im^2);
 delta_inicial = atan2(Vinv_im, Vinv_re);
-delta = delta_inicial;
 
-% El índice de modulación se obtiene de la expresión
-% Vinvvac=M*Vdc/2
-
-% Calculamos la señal completa para toda la simulación. Por eso sólo lo
-% hacemos una vez, cuando n=1
-% Es una señal triangular de -1 a 1. La frecuencia es Fcontrol, y tiene
-% Fs/Fcontrol muestras por ciclo
-%
-% Esta señal es la que se usa para comparar con la señal senoidal que se quiere
-% codificar.
+% Calculamos la señal triangular completa para toda la simulación. Es una
+% señal de -1 a 1, de frecuencia Fcontrol, con Fs/Fcontrol muestras por
+% ciclo. Sirve para comparar con las moduladoras y generar el PWM.
 v_tri = 2*abs(2*mod(Fcontrol*(q-1)/Fs, 1) - 1) - 1;
-
-
-% Cálculo para inicialización de la simulación
-M=2*Vinvvac/Vpv;
-
-% Añadimos muestra M(n) al vector de índices de modulación
-M_vector(r)=M;
 
 
 % Coeficientes del filtro discreto del inductor Lac (con RLac en serie).
@@ -832,10 +663,9 @@ bLac=1/(2*Fs*Lac+RLac);
 %
 % En régimen permanente, el balance de corrientes en el bus es Ipv = Idc
 % (el condensador no se carga ni descarga). La tensión del bus en ese punto
-% cumple Vpanel·Npanels = V0 + Ipv·Rgen, con Vpanel·Npanels = Vpv calculado
-% antes del bucle.
+% cumple Vbat = V0 + Ipv·Rgen, con Vbat constante.
 Idc=Ipv;
-V0=Vpv-Ipv*Rgen;          % Tensión inicial del bus DC
+V0=Vbat-Ipv*Rgen;         % Tensión inicial del bus DC
 V0z1=V0;
 Ipvz1=Ipv;
 Idcz1=Idc;
@@ -853,43 +683,54 @@ isz1=Im*cos(-wred/Fs+phi-2*pi/3);
 itz1=Im*cos(-wred/Fs+phi+2*pi/3);
 
 % Retardos de las tensiones del filtro (vinv_x - vacx con corrección homopolar)
-% en t = -1/Fs. En régimen permanente Vinv tiene fase delta y módulo Vinvvac;
-% Vred tiene fase 0 y módulo Vfn_pico. Inicializamos los retardos a la
-% diferencia teórica en régimen permanente para arrancar limpio.
-vLrz1=Vinvvac*cos(-wred/Fs+delta) - Vfnrmsred*sqrt(2)*cos(-wred/Fs);
-vLsz1=Vinvvac*cos(-wred/Fs+delta-2*pi/3) - Vfnrmsred*sqrt(2)*cos(-wred/Fs-2*pi/3);
-vLtz1=Vinvvac*cos(-wred/Fs+delta+2*pi/3) - Vfnrmsred*sqrt(2)*cos(-wred/Fs+2*pi/3);
+% en t = -1/Fs. En régimen permanente Vinv tiene fase delta_inicial y módulo
+% Vinvvac; Vred tiene fase 0 y módulo Vfn_pico.
+vLrz1=Vinvvac*cos(-wred/Fs+delta_inicial) - Vfnrmsred*sqrt(2)*cos(-wred/Fs);
+vLsz1=Vinvvac*cos(-wred/Fs+delta_inicial-2*pi/3) - Vfnrmsred*sqrt(2)*cos(-wred/Fs-2*pi/3);
+vLtz1=Vinvvac*cos(-wred/Fs+delta_inicial+2*pi/3) - Vfnrmsred*sqrt(2)*cos(-wred/Fs+2*pi/3);
 
-% Control PI del bus DC.
+% Diseño del control vectorial dq por cancelación de polo del filtro Lac+RLac.
 %
-% El lazo de tensión regula V0 al valor de consigna V0_ref = Vpv (punto de
-% trabajo calculado antes del bucle). La salida del PI ajusta delta (desfase
-% de la tensión sintetizada por el inversor respecto a la tensión de red),
-% que controla la potencia activa entregada a la red:
-%   - Si V0 > V0_ref: hay exceso de carga -> aumentar delta -> más potencia
-%     activa entregada -> V0 baja.
-%   - Si V0 < V0_ref: el bus se descarga -> reducir delta -> menos potencia
-%     activa entregada -> V0 sube.
+% Planta vista por el lazo de corriente (en cada eje d, q, tras desacoplo):
+%   G(s) = 1 / (Lac·s + RLac)
 %
-% Diseño del PI:
-%   - Frecuencia de corte deseada del lazo cerrado: 10 Hz (suficientemente
-%     lenta para no excitar el rizado a 100/300 Hz, suficientemente rápida
-%     para amortiguar el modo LC a ~56 Hz).
-%   - Cadencia de cálculo: cada Ncontrol muestras (Fcontrol = 2.45 kHz),
-%     periodo Ts_ctrl = Ncontrol/Fs.
-%   - Sensibilidad dPac/ddelta ≈ 3·Vfn_pico·Vinvvac / (2·wred·Lac).
-V0_ref=Vpv;
+% PI por cancelación de polo: el cero del PI cancela el polo de la planta,
+% dejando solo un polo en el origen. El lazo cerrado tiene un único polo
+% en s = -2π·fc_id.
+%
+% PI(s) = Kp·(1 + Ki_norm/s) con cero en s = -Ki_norm.
+% Para cancelar el polo en s = -RLac/Lac: Ki_norm = RLac/Lac.
+% Ki = Kp·Ki_norm = Kp·RLac/Lac.
+%
+% La ganancia del lazo abierto resulta = Kp/(Lac·s). Para lazo cerrado con
+% fc_id: Kp = 2·π·fc_id·Lac. Y por tanto Ki = 2·π·fc_id·RLac.
+%
+% Cadencia de cálculo: cada Ncontrol muestras, Ts_ctrl = Ncontrol/Fs.
 Ts_ctrl=Ncontrol/Fs;
-fc_PI=3;                                     % Frecuencia de corte del lazo cerrado (Hz)
-Kp_pot=2*pi*fc_PI*Cdc*V0_ref;                % Ganancia equivalente en W/V
-dPac_ddelta=3*Vfnrmsred*sqrt(2)*Vinvvac/(2*wred*Lac);   % W/rad
-Kp_PI=Kp_pot/dPac_ddelta;                    % rad/V
-Ki_PI=Kp_PI*2*pi*fc_PI/5;                    % rad/(V·s)
-delta_max=pi/4;                              % Saturación superior de delta (rad)
-delta_min=-pi/4;                             % Saturación inferior de delta (rad)
-PI_int=0;                                    % Estado del integrador (rad)
+fc_id=300;                                   % Frecuencia de corte del lazo de corriente (Hz)
+Kp_id=2*pi*fc_id*Lac;                        % Ganancia proporcional (V/A)
+Ki_id=2*pi*fc_id*RLac;                       % Ganancia integral (V/(A·s))
+PI_int_d=0;                                  % Estado del integrador en eje d (V)
+PI_int_q=0;                                  % Estado del integrador en eje q (V)
 
-flag_display_trip=0;                         % Controla que sólo se muestre 1 vez el mensaje de trip
+% Inicialización de las tensiones de referencia en dq con su valor de régimen
+% permanente teórico. En el referencial de la red (Vred en eje d, fase 0),
+% el fasor Vinv = Vinv_re + j·Vinv_im se proyecta directamente:
+%   vd_inv ← componente en fase con la red, Vinv_re
+%   vq_inv ← componente en cuadratura, Vinv_im
+vd_inv = Vinv_re;
+vq_inv = Vinv_im;
+
+% Inicialización de moduladoras en régimen permanente teórico. En la primera
+% muestra del bucle aún no se ha calculado el control, por lo que las
+% moduladoras tienen estos valores aproximados (deducidos del balance
+% fasorial), que coinciden con lo que devolvería la Park inversa de vd_inv,
+% vq_inv en régimen.
+mod_r = (2*Vinvvac/Vpv)*cos(delta_inicial);
+mod_s = (2*Vinvvac/Vpv)*cos(delta_inicial-2*pi/3);
+mod_t = (2*Vinvvac/Vpv)*cos(delta_inicial+2*pi/3);
+
+
 
 while (n<=N)
 
@@ -935,11 +776,6 @@ while (n<=N)
     if (n>=n_trip+Nabre_dc)
       disy_dc_cerrado=0;
     endif
-    if (flag_display_trip==0)
-      motivo_trip
-      flag_display_trip=1;
-    endif
-
   endif
 
   % Registro del estado por muestra
@@ -977,21 +813,32 @@ while (n<=N)
     Iarcdc=0;
   endif
 
+  % Generación de las señales moduladoras mediante Park inversa.
+  %
+  % El control vectorial mantiene en (vd_inv, vq_inv) las tensiones de
+  % referencia en coordenadas dq (que son aproximadamente constantes en
+  % régimen permanente). La transformada inversa de Park reconstruye las
+  % tensiones trifásicas de referencia a cada muestra, usando la fase
+  % instantánea de la red theta = wred·(n-1)/Fs. Las moduladoras se
+  % normalizan por V0/2 (necesario para que el PWM sintetice la tensión
+  % correcta), y se saturan a ±Mmax.
+  theta = wred*(n-1)/Fs;
+  vinv_ref_r = vd_inv*cos(theta)         - vq_inv*sin(theta);
+  vinv_ref_s = vd_inv*cos(theta-2*pi/3)  - vq_inv*sin(theta-2*pi/3);
+  vinv_ref_t = vd_inv*cos(theta+2*pi/3)  - vq_inv*sin(theta+2*pi/3);
 
-  % Generación de las señales moduladoras.
-  %
-  % Las moduladoras llevan amplitud M (índice de modulación) y desfase delta
-  % respecto a la tensión de red. delta es el adelanto angular de la tensión
-  % sintetizada por el inversor respecto a la red, calculado a partir del
-  % balance fasorial Vinv = Vred + j·wL·Iac.
-  %
-  % El control actualiza M cada Ncontrol muestras según M = 2·Vinvvac/V0,
-  % saturándolo a Mmax (sobremodulación). delta se mantiene constante en
-  % esta versión, ya que Plim, Qref y por tanto el balance fasorial no
-  % varían durante la simulación.
-  mod_r= M*cos(wred*(n-1)/Fs+delta);
-  mod_s= M*cos(wred*(n-1)/Fs+delta-2*pi/3);
-  mod_t= M*cos(wred*(n-1)/Fs+delta+2*pi/3);
+  mod_r = 2*vinv_ref_r / V0z1;
+  mod_s = 2*vinv_ref_s / V0z1;
+  mod_t = 2*vinv_ref_t / V0z1;
+
+  % Saturación de moduladoras (sobremodulación máxima ±Mmax).
+  sat_r = (abs(mod_r) > Mmax);
+  sat_s = (abs(mod_s) > Mmax);
+  sat_t = (abs(mod_t) > Mmax);
+  if (sat_r) mod_r = Mmax*sign(mod_r); endif
+  if (sat_s) mod_s = Mmax*sign(mod_s); endif
+  if (sat_t) mod_t = Mmax*sign(mod_t); endif
+  sat_any = sat_r || sat_s || sat_t;
 
 
   % Generación de las señales PWM de cada fase y rama (positiva y negativa)
@@ -1134,56 +981,30 @@ while (n<=N)
 
 
 
-  % Cálculo acoplado de V0(n), Vpanel(n), Ipanel(n) e Ipv(n).
+  % Cálculo acoplado de V0(n) e Ipv(n) para batería.
   %
-  % El sistema acopla tres ecuaciones en el instante n:
+  % El sistema acopla dos ecuaciones en el instante n:
   %
   %   1) Regla del trapecio sobre Cdc·dV0/dt = Ipv - Idc:
-  %      V0(n) = V0(n-1) + Kbus·[Ipv(n) - Idc(n) + Ipv(n-1) - Idc(n-1)]
+  %      V0(n) = V0z1 + Kbus·[Ipv(n) - Idc(n) + Ipvz1 - Idcz1]
   %
-  %   2) Balance de tensiones en la malla campo-Rgen-bus:
-  %      Vpanel(n)·Npanels = V0(n) + Ipv(n)·Rgen
+  %   2) Ley de Ohm en la batería (Vbat constante, Rgen serie):
+  %      Ipv(n) = (Vbat - V0(n))/Rgen
   %
-  %   3) Curva I-V del panel (lineal por tramos):
-  %      Ipanel(n) = m·Vpanel(n) + b   (pendiente m y ordenada b según tramo)
-  %      Ipv(n)    = Ipanel(n)·Npanelp
-  %
-  % Combinando las tres ecuaciones se obtiene una expresión cerrada para
-  % Ipv(n). Llamando H = V0z1 + Kbus·(Ipvz1 - Idcz1 - Idc(n)) y
-  % alpha = Npanelp·m/Npanels, beta = Npanelp·b, queda:
-  %
-  %   Ipv(n) = (alpha·H + beta) / [1 - alpha·(Kbus + Rgen)]
-  %
-  % La selección de tramo se hace probando primero el tramo derecho (que es
-  % el habitual en operación normal con Plim<=1). Si el Vpanel resultante
-  % cae por debajo de Vmpptpanel, se recalcula con el tramo izquierdo.
+  % Sustituyendo (2) en (1) y despejando V0(n):
+  %   V0(n) = [V0z1 + Kbus·(Vbat/Rgen - Idc(n) + Ipvz1 - Idcz1)] / (1 + Kbus/Rgen)
+  % y después Ipv(n) se calcula a partir de la ley de Ohm.
 
   if (disy_dc_cerrado==1)
-    H = V0z1 + Kbus*(Ipvz1 - Idcz1 - Idc);
-
-    % Tramo derecho: Vpanel en [Vmpptpanel, Vocpanel]
-    alpha = Npanelp*mR_panel/Npanels;
-    beta  = Npanelp*bR_panel;
-    Ipv_actual = (alpha*H + beta) / (1 - alpha*(Kbus + Rgen));
-    V0 = H + Kbus*Ipv_actual;
-    Vpanel = (V0 + Ipv_actual*Rgen)/Npanels;
-
-    if (Vpanel < Vmpptpanel)
-      % Tramo izquierdo: Vpanel en [0, Vmpptpanel]
-      alpha = Npanelp*mL_panel/Npanels;
-      beta  = Npanelp*bL_panel;
-      Ipv_actual = (alpha*H + beta) / (1 - alpha*(Kbus + Rgen));
-      V0 = H + Kbus*Ipv_actual;
-      Vpanel = (V0 + Ipv_actual*Rgen)/Npanels;
-    endif
+    V0 = (V0z1 + Kbus*(Vbat/Rgen - Idc + Ipvz1 - Idcz1)) / (1 + Kbus/Rgen);
+    Ipv_actual = (Vbat - V0)/Rgen;
   else
-    % Disyuntor DC abierto: paneles desconectados del bus. Ipv=0 (no entra
-    % corriente al bus desde el campo). El bus queda con su propia dinámica
-    % Cdc·dV0/dt = -Idc, lo que en regla del trapecio da:
+    % Disyuntor DC abierto: batería desconectada del bus. Ipv=0 y el bus
+    % queda con su propia dinámica Cdc·dV0/dt = -Idc, que en regla del
+    % trapecio da:
     %   V0(n) = V0(n-1) + Kbus·(-Idc(n) - Idcz1)
     Ipv_actual = 0;
     V0 = V0z1 + Kbus*(-Idc - Idcz1);
-    Vpanel = Vocpanel;     % los paneles quedan en circuito abierto
   endif
 
   vdc(n)=V0;
@@ -1271,90 +1092,79 @@ while (n<=N)
 
   % Almacenamiento de las corrientes del lado DC
   %
-  % ipv:   corriente entregada por el campo fotovoltaico, calculada a partir
-  %        de la curva I-V evaluada en Vpanel(n).
-  % idcin: corriente que entra al bus desde el campo. En este modelo, al estar
-  %        Rgen en serie sin derivaciones intermedias, idcin = ipv.
+  % ipv:   corriente entregada por la batería al bus, Ipv = (Vbat-V0)/Rgen.
+  % idcin: corriente que entra al bus desde la batería. Al estar Rgen en
+  %        serie sin derivaciones intermedias, idcin = ipv.
   % icd:   corriente por el condensador del bus, por balance en el nodo:
   %        icd = idcin - Idc.
   ipv(n)=Ipv_actual;
   idcin(n)=Ipv_actual;
   icd(n)=Ipv_actual-Idc;
 
-  % Actualización del control cada Ncontrol muestras.
+  % Medida en coordenadas dq de las corrientes de fase (cada muestra).
   %
-  % 1) Feed-forward de potencia: el delta requerido para inyectar la potencia
-  %    que están entregando los paneles (P_pv = V0·Ipv) se calcula de forma
-  %    explícita a partir del balance fasorial. Esto elimina la necesidad de
-  %    que el PI descubra el balance a través de la deriva de V0, y permite
-  %    un arranque limpio y una respuesta inmediata a caídas de campo.
+  % La Park abc→dq se aplica sobre las corrientes SIN FILTRAR ir(n), is(n),
+  % it(n). Hacerla sobre las corrientes filtradas con el filtro de medida
+  % a 100 Hz atenuaría y desfasaría la fundamental a 50 Hz, introduciendo
+  % un error sistemático en la magnitud y dirección de las componentes dq.
   %
-  %    Fórmula: Pac ≈ (3·Vfn_pico·Vinvvac / (2·wred·Lac))·sin(delta_ff)
-  %    => sin(delta_ff) = 2·wred·Lac·Pac / (3·Vfn_pico·Vinvvac)
-  %    Se satura el argumento a [-1, 1] por seguridad numérica.
+  % Después se aplica un filtro paso-bajo sobre idmed_raw, iqmed_raw para
+  % suavizar el rizado de PWM (que en dq aparece como armónicos de alta
+  % frecuencia). En régimen permanente las componentes dq son DC, así que
+  % el filtro PB no penaliza la respuesta. Reutilizamos los coeficientes
+  % [B,A] del filtro elíptico de medida (Fp=100 Hz). IMPORTANTE: este
+  % filtro se aplica a cada muestra (Fs=49 kHz, igual que para el resto
+  % de medidas) y no cada Ncontrol; de lo contrario, los polos del filtro
+  % se desplazan respecto al diseño y desestabilizan el lazo.
+  theta = wred*(n-1)/Fs;
+  idmed_raw =  (2/3)*( ir(n)*cos(theta) + is(n)*cos(theta-2*pi/3) + it(n)*cos(theta+2*pi/3) );
+  iqmed_raw = -(2/3)*( ir(n)*sin(theta) + is(n)*sin(theta-2*pi/3) + it(n)*sin(theta+2*pi/3) );
+
+  idmed = idmed_raw*B(1) + idmedinz1*B(2) + idmedinz2*B(3) - idmedfz1*A(2) - idmedfz2*A(3);
+  idmedinz2=idmedinz1; idmedinz1=idmed_raw;
+  idmedfz2=idmedfz1;   idmedfz1=idmed;
+
+  iqmed = iqmed_raw*B(1) + iqmedinz1*B(2) + iqmedinz2*B(3) - iqmedfz1*A(2) - iqmedfz2*A(3);
+  iqmedinz2=iqmedinz1; iqmedinz1=iqmed_raw;
+  iqmedfz2=iqmedfz1;   iqmedfz1=iqmed;
+
+  % Actualización del control vectorial dq cada Ncontrol muestras.
   %
-  % 2) PI sobre V0: ajusta delta como corrección sobre el feed-forward para
-  %    regular V0 al valor de consigna V0_ref. El integrador se congela cuando
-  %    delta está saturado (anti-windup).
-  %
-  % 3) Índice de modulación M = 2·Vinvvac/V0, saturado a Mmax (sobremodulación).
-  %    Si V0 cae por debajo de 2·Vinvvac/Mmax, el inversor satura.
+  % Pasos:
+  %   1) Errores de seguimiento respecto a las consignas id_ref, iq_ref,
+  %      usando las componentes dq filtradas que se actualizan a cada
+  %      muestra antes de este bloque.
+  %   2) PI por eje (cancelación de polo del filtro Lac+RLac).
+  %   3) Desacoplo cruzado d-q y feed-forward de tensión de red:
+  %      vd_inv = vd_pi + Vfn_pico - wred·Lac·iqmed
+  %      vq_inv = vq_pi               + wred·Lac·idmed
+  %   4) Las tensiones en dq se almacenan; la Park inversa se aplica
+  %      muestra a muestra al inicio del bucle siguiente.
+  %   5) Anti-windup: si las moduladoras se han saturado en la última
+  %      muestra, se congela el integrador de los dos ejes (sat_any).
   control=control+1;
   if (control>=Ncontrol && igbts_activos==1)
     control=0;
 
-    % Feed-forward: delta requerido para entregar la potencia neta que sale
-    % del puente, descontando las pérdidas en la bobina del filtro.
-    %
-    % Balance de potencia (régimen permanente):
-    %   P_pv (del bus DC) = P_ac_red (a la red) + P_RLac (pérdidas en Lac)
-    %
-    % donde:
-    %   P_pv      = V0·Ipv (potencia que aportan los paneles al bus)
-    %   P_RLac    = (3/2)·RLac·Im² = RLac·(ir² + is² + it²) en valor
-    %               instantáneo, equivalente a la media en régimen sinusoidal
-    %   P_ac_red  = P_pv - P_RLac
-    %
-    % Se usan las corrientes instantáneas ir_act, is_act, it_act para estimar
-    % las pérdidas sin asumir régimen permanente.
-    P_pv=vdcmed(n)*idcmed(n);
-    P_RLac=RLac*(irmed(n)^2+ismed(n)^2+itmed(n)^2);
-    P_ac_obj=P_pv-P_RLac;
-    sin_arg=2*wred*Lac*P_ac_obj/(3*Vfnrmsred*sqrt(2)*Vinvvac);
-    if (sin_arg>1)
-      sin_arg=1;
-    elseif (sin_arg<-1)
-      sin_arg=-1;
+    % Errores
+    err_id = id_ref - idmed;
+    err_iq = iq_ref - iqmed;
+
+    % PI por eje. Integrador con anti-windup si las moduladoras saturaron.
+    if (sat_any==0)
+      PI_int_d = PI_int_d + Ki_id*Ts_ctrl*err_id;
+      PI_int_q = PI_int_q + Ki_id*Ts_ctrl*err_iq;
     endif
-    delta_ff=asin(sin_arg);
+    vd_pi = Kp_id*err_id + PI_int_d;
+    vq_pi = Kp_id*err_iq + PI_int_q;
 
-    % PI sobre el bus DC: corrección sobre el feed-forward. err positivo si
-    % V0 supera la consigna.
-    err_V0=vdcmed(n)-V0_ref;
-    errV0_vect(r)=err_V0;
-    delta_unsat=delta_ff+Kp_PI*err_V0+PI_int+Ki_PI*Ts_ctrl*err_V0;
-    if (delta_unsat>delta_max)
-      delta=delta_max;
-    elseif (delta_unsat<delta_min)
-      delta=delta_min;
-    else
-      delta=delta_unsat;
-      PI_int=PI_int+Ki_PI*Ts_ctrl*err_V0;     % Integrador solo si no saturado
-    endif
-
-    % Índice de modulación
-    M=2*Vinvvac/V0;
-    if (M>Mmax)
-      M=Mmax;
-    endif
-
-    r=r+1;
-    % Añadimos muestra M(n) al vector de índices de modulación
-    M_vector(r)=M;
-
+    % Desacoplo cruzado d-q y feed-forward de tensión de red:
+    %   eje d incluye la tensión de red (Vfn_pico) y resta el término de
+    %                acoplamiento del eje q (wred·Lac·iqmed).
+    %   eje q solo suma el término de acoplamiento del eje d.
+    vd_inv = vd_pi + Vfnrmsred*sqrt(2) - wred*Lac*iqmed;
+    vq_inv = vq_pi                     + wred*Lac*idmed;
   endif
-
-  % Cálculo de la corriente de paneles
 
 
   n=n+1;
